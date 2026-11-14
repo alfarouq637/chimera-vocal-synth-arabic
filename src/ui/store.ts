@@ -10,6 +10,7 @@ import { singNoteOn, singNoteOff, stopSinging } from "./singing.ts";
 import { stopSpeaking } from "./speech.ts";
 import { connectMidi, disconnectMidi, type MidiStatus } from "./midi.ts";
 import type { UiLanguage } from "./i18n.ts";
+import type { AudioQuality } from "../wasm/types.ts";
 
 export type Mode = "play" | "speak" | "sing" | "bestiary" | "beatbox";
 
@@ -41,6 +42,7 @@ interface State {
   artic: HumanArtic;
   tipFree: boolean;
   volume: number;
+  audioQuality: AudioQuality;
   /** sustained breath (drone) independent of keys */
   hold: boolean;
   heldNotes: number[];
@@ -79,6 +81,7 @@ interface State {
   setSource: (v: Partial<VoiceSource>) => void;
   setArtic: (v: Partial<HumanArtic>, tipFree?: boolean) => void;
   setVolume: (v: number) => void;
+  setAudioQuality: (quality: AudioQuality) => void;
   setHold: (h: boolean) => void;
   /** Breathe: on (starting the audio first, if need be) or off */
   toggleBreath: () => Promise<void>;
@@ -108,6 +111,19 @@ function updateGate(s: { hold: boolean; heldNotes: number[]; mode: Mode; keyCall
   // keys that trigger calls leave the breath to the call; sung notes breathe by themselves
   const keysBreathe = !(s.mode === "bestiary" && s.keyCall) && s.mode !== "sing";
   engine.gate(s.hold || (keysBreathe && s.heldNotes.length > 0) ? 1 : 0);
+}
+
+function configureEngine(s: State): void {
+  engine.setVolume(s.volume);
+  if (!sameBody(s.body, PRESETS.male)) engine.setBody(s.body);
+  engine.setSource(s.source);
+  engine.setArtic(s.artic, s.tipFree);
+  if (s.mode === "bestiary") engine.setCreature(s.creature, s.cparams[s.creature]);
+  if (s.mode === "beatbox") {
+    engine.setMic(s.mic);
+    engine.setBeat({ steps: s.beat.steps, bpm: s.beat.bpm, swing: s.beat.swing, playing: s.beat.playing });
+  }
+  updateGate(s);
 }
 
 let startPromise: Promise<void> | null = null;
@@ -142,12 +158,13 @@ export const useStore = create<State>((set, get) => ({
   })(),
   tipFree: true,
   volume: 0.8,
+  audioQuality: "performance",
   hold: false,
   heldNotes: [],
   view: { pressure: true, particles: true, grid: false, calipers: true, threeD: false },
   // the app opens on Sing: hearing a song is the quickest way in (the plugin opens there too)
   mode: "sing",
-  language: "en",
+  language: "ar",
   setLanguage: (language) => set({ language }),
   setMode: (m) => {
     const prev = get().mode;
@@ -271,17 +288,7 @@ export const useStore = create<State>((set, get) => ({
       try {
         await engine.start();
         // anything set before audio existed was not delivered: send the whole state now
-        const s = get();
-        engine.setVolume(s.volume);
-        if (!sameBody(s.body, PRESETS.male)) engine.setBody(s.body);
-        engine.setSource(s.source);
-        engine.setArtic(s.artic, s.tipFree);
-        if (s.mode === "bestiary") engine.setCreature(s.creature, s.cparams[s.creature]);
-        if (s.mode === "beatbox") {
-          engine.setMic(s.mic);
-          engine.setBeat({ steps: s.beat.steps, bpm: s.beat.bpm, swing: s.beat.swing, playing: s.beat.playing });
-        }
-        updateGate(s);
+        configureEngine(get());
         set({ started: true, starting: false });
       } catch (e) {
         set({ starting: false, startError: e instanceof Error ? e.message : String(e) });
@@ -313,6 +320,49 @@ export const useStore = create<State>((set, get) => ({
   setVolume: (v) => {
     set({ volume: v });
     engine.setVolume(v);
+  },
+  setAudioQuality: (quality) => {
+    const before = get();
+    if (before.audioQuality === quality || before.starting) return;
+    set({ audioQuality: quality });
+    if (!before.started) {
+      void engine.setQuality(quality);
+      return;
+    }
+
+    if (before.mode === "sing") stopSinging();
+    if (before.mode === "speak") stopSpeaking();
+    if (before.mode === "bestiary") engine.stopCall();
+    if (before.beat.playing) engine.setBeat({ playing: false });
+    set((s) => ({
+      started: false,
+      starting: true,
+      startError: null,
+      hold: false,
+      heldNotes: [],
+      beat: { ...s.beat, playing: false },
+    }));
+    updateGate(get());
+
+    const switching = (async () => {
+      try {
+        await engine.setQuality(quality);
+        configureEngine(get());
+        set({ started: true, starting: false });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (engine.running) configureEngine(get());
+        set({
+          audioQuality: before.audioQuality,
+          started: engine.running,
+          starting: false,
+          startError: message,
+        });
+      } finally {
+        startPromise = null;
+      }
+    })();
+    startPromise = switching;
   },
   setHold: (h) => {
     set({ hold: h });

@@ -59,6 +59,13 @@ describe("worklet ordering", () => {
     block();
     expect(scoreSize()).toBe(0);
     expect(posted.filter((m) => m.type === "error")).toEqual([]);
+
+    const telemetryBefore = posted.filter((m) => m.type === "telemetry").length;
+    g.sampleRate = 36000;
+    const highQuality = new Ctor!({ processorOptions: { module: wasmModule } });
+    for (let i = 0; i < 282; i++) highQuality.process([], [[new Float32Array(128)]]);
+    expect(posted.filter((m) => m.type === "telemetry").length - telemetryBefore).toBe(30);
+    g.sampleRate = 48000;
   });
 });
 

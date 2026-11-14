@@ -10,13 +10,14 @@ for tests and the `chimera` CLI.
 ## Chimera Arabic Version
 
 This repository is an Arabic-focused fork of [the original CHIMERA project](https://github.com/jamesondh/chimera-vocal-synth).
+The Arabic version is maintained at [alfarouq637/chimera-vocal-synth-arabic](https://github.com/alfarouq637/chimera-vocal-synth-arabic).
 It extends the physical voice simulator with Arabic speech and singing support. Sound is generated
 by a model of the lungs, vocal folds and vocal tract—not by prerecorded audio or an AI voice model.
 
 ### Arabic features in this fork
 
 - **Arabic/English interface:** Switch languages from the top bar. Arabic mode sets the page to
-  right-to-left layout and provides Arabic speech and song examples.
+  right-to-left layout and is the default, with expanded Arabic speech and song examples.
 - **Direct Arabic text routing:** Arabic script is sent to the Arabic front end; it is not
   transliterated into English spelling or passed through English G2P. Arabic and English can be
   mixed in one input, with routing selected by script.
@@ -33,6 +34,20 @@ by a model of the lungs, vocal folds and vocal tract—not by prerecorded audio 
   evaluation and native-speaker review are needed before treating it as accurate.
 - **Breath-driven physical voice:** This fork uses CHIMERA's existing physical airflow model to
   drive the vocal tract and voice instead of assembling prerecorded samples.
+- **Audio performance modes:** the default Performance mode uses a 32 kHz output context and the
+  engine's stable 64 kHz simulation rate. High quality uses 36 kHz output and a 72 kHz simulation,
+  retaining extra real-time headroom while covering the audible voice spectrum.
+  The browser resamples either mode for the device; recorded clips are resampled to 48 kHz for
+  encoder compatibility. Switching modes restarts the current sound.
+- **Traditional Arabic repertoire:** includes the four-verse traditional nasheed *Tala al-Badru
+  'Alayna* in an original, slow chant with paired rising/falling motifs, and the full poem *Sawt Safir
+  al-Bulbul* in a quick, speech-like rhythmic recitation with a narrow pitch range. The historical
+  melody of *Tala al-Badru* is not established, and
+  the poem's attribution to al-Asma'i is disputed; these are style interpretations, not recordings
+  or claims of an authenticated original performance. The lyrics follow the traditional texts in
+  [Wikisource](https://ar.wikisource.org/wiki/%D8%B5%D9%88%D8%AA_%D8%B5%D9%81%D9%8A%D8%B1_%D8%A7%D9%84%D8%A8%D9%84%D8%A8%D9%84)
+  and [the Arabic Wikipedia article](https://ar.wikipedia.org/wiki/%D8%B7%D9%84%D8%B9_%D8%A7%D9%84%D8%A8%D8%AF%D8%B1_%D8%B9%D9%84%D9%8A%D9%86%D8%A7);
+  punctuation and vocalization are editorial.
 
 ### Try Arabic
 

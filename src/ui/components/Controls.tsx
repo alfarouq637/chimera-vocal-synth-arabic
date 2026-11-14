@@ -62,7 +62,7 @@ export function Segmented<T extends string>(props: { value: T | null; options: {
 }
 
 /** A choice of a few named things (a song, a pattern), as a native select in the vector look. */
-export function Menu<T extends string>(props: { label: string; value: T; options: { value: T; label: string; disabled?: boolean }[]; onChange: (v: T) => void; icon?: "note" }) {
+export function Menu<T extends string>(props: { label: string; value: T; options: { value: T; label: string; disabled?: boolean }[]; onChange: (v: T) => void; icon?: "note"; disabled?: boolean }) {
   const language = useStore((s) => s.language);
   return (
     <span className={`menu${props.icon ? " with-icon" : ""}`}>
@@ -72,7 +72,7 @@ export function Menu<T extends string>(props: { label: string; value: T; options
           <path d="M6.6 12.4V1.5l4.4 2.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
         </svg>
       )}
-      <select aria-label={t(props.label, language)} value={props.value} onChange={(e) => props.onChange(e.target.value as T)}>
+      <select aria-label={t(props.label, language)} value={props.value} disabled={props.disabled} onChange={(e) => props.onChange(e.target.value as T)}>
         {props.options.map((o) => (
           <option key={o.value} value={o.value} disabled={o.disabled}>
             {t(o.label, language)}

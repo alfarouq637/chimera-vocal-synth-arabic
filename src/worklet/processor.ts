@@ -3,7 +3,7 @@
  *
  * Messages map to engine calls as they arrive (between render quanta, on this thread), so their
  * order is the order they take effect. process() renders, measures load and posts fixed-size
- * telemetry (~60 Hz). If the engine traps (a bug), the processor outputs silence from then on and
+ * telemetry (~30 Hz). If the engine traps (a bug), the processor outputs silence from then on and
  * reports once; the main thread may build a new node, which restarts playback state.
  */
 import { writeGestures, writeSteps, fromUtf8, utf8, CONTROL_KEYS } from "../wasm/wire.ts";
@@ -42,7 +42,7 @@ class ChimeraProcessor extends AudioWorkletProcessor {
   private readonly h: number;
   private failed = false;
   private telemetryOn = true;
-  private blocks = 0;
+  private telemetrySamples = 0;
   private load = 0;
   private creature: CreatureInfo | null = null;
 
@@ -199,12 +199,17 @@ class ChimeraProcessor extends AudioWorkletProcessor {
     const dt = Date.now() - t0;
     const budget = (ch0.length / sampleRate) * 1000;
     this.load += 0.05 * (dt / budget - this.load);
-    if (this.telemetryOn && !this.failed && ++this.blocks % 6 === 0) {
-      try {
-        if (this.creature) this.post({ type: "ctelemetry", t: this.creatureTelemetry(this.creature), load: this.load });
-        else this.post(this.humanTelemetry());
-      } catch (err) {
-        this.fail(err);
+    if (this.telemetryOn && !this.failed) {
+      this.telemetrySamples += ch0.length;
+      const telemetryPeriod = sampleRate / 30;
+      if (this.telemetrySamples >= telemetryPeriod) {
+        this.telemetrySamples %= telemetryPeriod;
+        try {
+          if (this.creature) this.post({ type: "ctelemetry", t: this.creatureTelemetry(this.creature), load: this.load });
+          else this.post(this.humanTelemetry());
+        } catch (err) {
+          this.fail(err);
+        }
       }
     }
     return true;

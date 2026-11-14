@@ -327,6 +327,13 @@ async function main() {
       continue;
     }
     await page.goto(url, { waitUntil: "networkidle" });
+    const locale = await page.evaluate(() => ({ language: document.documentElement.lang, direction: document.documentElement.dir }));
+    if (locale.language !== "ar" || locale.direction !== "rtl") {
+      console.log(`  ERROR default language should be Arabic/RTL, got ${locale.language}/${locale.direction}`);
+      errors++;
+    }
+    await check("Arabic default");
+    await page.getByRole("radio", { name: "English", exact: true }).click();
     for (const m of modes) {
       await mode(m);
       await check(m);

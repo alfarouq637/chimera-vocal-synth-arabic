@@ -16,6 +16,11 @@ const browser = await chromium.launch({
 });
 const errors: string[] = [];
 const logs: string[] = [];
+async function useEnglish(page: Page) {
+  const english = page.getByRole("radio", { name: "English", exact: true });
+  if (await english.count()) await english.click();
+}
+
 async function run(viewport: { width: number; height: number }, tag: string) {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
   page.on("console", (m) => {
@@ -26,7 +31,28 @@ async function run(viewport: { width: number; height: number }, tag: string) {
   page.on("pageerror", (e) => errors.push(`[${tag}] pageerror: ${e.message}`));
   await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForTimeout(400);
+  const defaultUi = await page.evaluate(() => ({
+    language: document.documentElement.lang,
+    direction: document.documentElement.dir,
+    lyrics: document.querySelector<HTMLTextAreaElement>(".lyrics textarea")?.value ?? "",
+    github: document.querySelector<HTMLAnchorElement>(".repo-link")?.href ?? "",
+  }));
+  if (defaultUi.language !== "ar" || defaultUi.direction !== "rtl" || !/[\u0600-\u06ff]/u.test(defaultUi.lyrics)) {
+    errors.push(`[${tag}] Arabic is not the default language and song text (${JSON.stringify(defaultUi)})`);
+  }
+  if (defaultUi.github !== "https://github.com/alfarouq637/chimera-vocal-synth-arabic") errors.push(`[${tag}] the GitHub link points to ${defaultUi.github}`);
+  const arabicSongExamples = await page.getByRole("combobox", { name: "أمثلة الكلمات" }).locator("option").allTextContents();
+  if (!arabicSongExamples.some((text) => text.includes("طَلَعَ الْبَدْرُ")) || !arabicSongExamples.some((text) => text.includes("صَوْتُ صَفِيرِ الْبُلْبُلِ"))) {
+    errors.push(`[${tag}] Arabic nasheed or poem example is missing (${arabicSongExamples.join(" | ")})`);
+  }
+  await page.getByRole("radio", { name: "تحدث", exact: true }).click();
+  const arabicSpeechExamples = await page.getByRole("combobox", { name: "أمثلة", exact: true }).locator("option").allTextContents();
+  if (arabicSpeechExamples.length < 13 || !arabicSpeechExamples.some((text) => text.includes("اِسْمِي الْفَارُوقُ"))) {
+    errors.push(`[${tag}] the corrected, expanded Arabic speech examples are missing (${arabicSpeechExamples.length})`);
+  }
+  await page.getByRole("radio", { name: "غناء", exact: true }).click();
   await page.screenshot({ path: `${outDir}/${tag}-0-idle.png` });
+  await useEnglish(page);
   // the app opens on Sing; this run starts in Play
   await page.getByRole("radio", { name: "Play" }).click();
   if (tag === "desktop") await grabTongueFirst(page, tag);
@@ -34,6 +60,60 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     // each tab's main button starts the audio: Play's breathes
     await page.getByRole("button", { name: /^Breathe$/ }).click();
     await page.waitForTimeout(1800);
+  }
+  const audioMode = page.getByRole("combobox", { name: "Audio mode" });
+  const audioRate = () =>
+    page.evaluate(() => {
+      // @ts-expect-error debug handle
+      return window.__chimeraEngine?.ctx?.sampleRate ?? -1;
+    });
+  if ((await audioRate()) !== 32000) errors.push(`[${tag}] Performance mode did not start at 32 kHz (${await audioRate()} Hz)`);
+  if (tag === "desktop") {
+    await audioMode.selectOption("high");
+    const highStarted = await page
+      .waitForFunction(
+        () => {
+          // @ts-expect-error debug handle
+          return window.__chimeraEngine?.ctx?.sampleRate === 36000;
+        },
+        null,
+        { timeout: 10000 },
+      )
+      .then(() => true)
+      .catch(() => false);
+    if (!highStarted) errors.push("[audio-quality] High quality did not restart at 36 kHz");
+    if (highStarted) {
+      await page.waitForTimeout(1200);
+      const load = await page.evaluate(() => {
+        // @ts-expect-error debug handle
+        return window.__chimeraEngine?.load ?? Infinity;
+      });
+      logs.push(`[audio-quality] high-quality mode engine load ${(load * 100).toFixed(0)}%`);
+      if (load >= 1) errors.push(`[audio-quality] High quality mode exceeded its real-time budget (${(load * 100).toFixed(0)}%)`);
+    }
+    await audioMode.selectOption("performance");
+    const performanceStarted = await page
+      .waitForFunction(
+        () => {
+          // @ts-expect-error debug handle
+          return window.__chimeraEngine?.ctx?.sampleRate === 32000;
+        },
+        null,
+        { timeout: 10000 },
+      )
+      .then(() => true)
+      .catch(() => false);
+    if (!performanceStarted) errors.push("[audio-quality] Performance did not restart at 32 kHz");
+    if (performanceStarted) {
+      await page.getByRole("button", { name: /^Breathe$/ }).click();
+      await page.waitForTimeout(1200);
+      const load = await page.evaluate(() => {
+        // @ts-expect-error debug handle
+        return window.__chimeraEngine?.load ?? Infinity;
+      });
+      logs.push(`[audio-quality] performance mode engine load ${(load * 100).toFixed(0)}%`);
+      if (load >= 1) errors.push(`[audio-quality] Performance mode exceeded its real-time budget (${(load * 100).toFixed(0)}%)`);
+    }
   }
   await page.screenshot({ path: `${outDir}/${tag}-1-running.png` });
   // drag the tongue body handle via the canvas: find it by probing (center-ish of viewport)
@@ -287,6 +367,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     };
   });
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.getByRole("radio", { name: "Play" }).click();
   await page.getByRole("button", { name: /^Breathe$/ }).click();
   const failed = await page.getByText(/Audio could not start/).waitFor({ timeout: 10000 }).then(() => true, () => false);
@@ -308,6 +389,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   page.on("pageerror", (e) => errors.push(`[first-key] pageerror: ${e.message}`));
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.getByRole("radio", { name: "Sing" }).click();
   await page.keyboard.down("d");
   await page.waitForTimeout(1200);
@@ -321,8 +403,8 @@ async function run(viewport: { width: number; height: number }, tag: string) {
   await page.close();
 }
 
-// the voice runs at 48 kHz on a 192 kHz device: at the device's rate it took ~3x the CPU and
-// starved the worklet (issue #33). The patched constructor plays a device whose default is 192 kHz.
+// Performance mode keeps its selected output rate even when the device defaults to 192 kHz. The
+// browser resamples for the device instead of making the worklet simulate at its much higher rate.
 {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   page.on("pageerror", (e) => errors.push(`[device-rate] pageerror: ${e.message}`));
@@ -335,6 +417,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     };
   });
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.getByRole("radio", { name: "Play" }).click();
   await page.getByRole("button", { name: /^Breathe$/ }).click();
   await page.waitForTimeout(1500);
@@ -343,7 +426,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     return window.__chimeraEngine?.ctx?.sampleRate ?? -1;
   });
   logs.push(`[device-rate] a 192 kHz device runs the voice at ${rate} Hz`);
-  if (rate !== 48000) errors.push(`[device-rate] the voice ran at ${rate} Hz on a 192 kHz device (want 48000)`);
+  if (rate !== 32000) errors.push(`[device-rate] Performance mode ran at ${rate} Hz on a 192 kHz device (want 32000)`);
   await page.close();
 }
 
@@ -354,6 +437,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
   page.on("console", (m) => m.type() === "error" && errors.push(`[video] ${m.text()}`));
   page.on("pageerror", (e) => errors.push(`[video] pageerror: ${e.message}`));
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.locator(".lyrics textarea").fill("one two three");
   await page.getByRole("combobox", { name: "Tune" }).selectOption({ label: "Playful" });
   await page.getByRole("button", { name: /^Record video$/ }).click();
@@ -371,6 +455,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
   }
   // the words and the tune come back on reload
   await page.reload({ waitUntil: "networkidle" });
+  await useEnglish(page);
   const words = await page.locator(".lyrics textarea").inputValue();
   const tune = await page.getByRole("combobox", { name: "Tune" }).inputValue();
   if (words !== "one two three" || tune !== "playful") errors.push(`[video] the song didn't come back on reload: "${words}" to ${tune}`);
@@ -394,6 +479,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     };
   });
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.locator(".lyrics textarea").fill("one two");
   // both taps land before the first has started the audio (a second Playwright click would wait,
   // and then find Cancel)
@@ -424,6 +510,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     };
   });
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.locator(".lyrics textarea").fill("one two three four five six seven eight");
   await page.getByRole("button", { name: /^Sing$/ }).click();
   await page.waitForTimeout(2500);
@@ -465,6 +552,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     };
   });
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.locator(".lyrics textarea").fill("one two three four five six seven eight nine ten");
   await page.getByRole("button", { name: /^Record video$/ }).click();
   await page.getByRole("button", { name: /^Cancel$/ }).waitFor({ timeout: 10000 });
@@ -503,6 +591,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     } as typeof CanvasRenderingContext2D.prototype.drawImage;
   });
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.locator(".lyrics textarea").fill("one two three four five six seven eight nine ten");
   await page.getByRole("button", { name: /^Record video$/ }).click();
   await page.getByRole("button", { name: /^Cancel$/ }).waitFor({ timeout: 10000 });
@@ -538,6 +627,7 @@ async function run(viewport: { width: number; height: number }, tag: string) {
     };
   });
   await page.goto(url, { waitUntil: "networkidle" });
+  await useEnglish(page);
   await page.getByRole("button", { name: /^Record video$/ }).click();
   await page.waitForTimeout(2500);
   await page.evaluate(() => ((window as unknown as { __texts: string[] }).__texts = []));

@@ -9,6 +9,7 @@ import type { ToWorklet, FromWorklet, TelemetryMessage, PlannedMessage, Creature
 import type { BodyMix } from "../wasm/types.ts";
 import type { HumanArtic } from "../wasm/types.ts";
 import type { VoiceSource } from "../wasm/types.ts";
+import type { AudioQuality } from "../wasm/types.ts";
 
 type Listener = (t: TelemetryMessage) => void;
 
@@ -21,6 +22,8 @@ export class AudioEngine {
   /** long time-domain window for the waveform scope */
   analyserScope: AnalyserNode | null = null;
   private master: GainNode | null = null;
+  private outputVolume = 0.8;
+  private audioQuality: AudioQuality = "performance";
   /** "close mic" chain: proximity bass, presence, compression (beatboxers cup the mic) */
   private micIn: AudioNode | null = null;
   private micOn = false;
@@ -51,15 +54,37 @@ export class AudioEngine {
   }
 
   private tap: MediaStreamAudioDestinationNode | null = null;
+  private recordingContext: AudioContext | null = null;
+  private recordingSource: MediaStreamAudioSourceNode | null = null;
+  private recordingTap: MediaStreamAudioDestinationNode | null = null;
 
   /** What the speakers play, as a media stream (to record a clip); null before start(). */
-  recordStream(): MediaStream | null {
+  async recordStream(): Promise<MediaStream | null> {
     if (!this.ctx || !this.master) return null;
     if (!this.tap) {
       this.tap = this.ctx.createMediaStreamDestination();
       this.master.connect(this.tap);
     }
-    return this.tap.stream;
+    if (this.ctx.sampleRate === 48000) return this.tap.stream;
+    if (!this.recordingContext) {
+      const context = new AudioContext({ latencyHint: "interactive", sampleRate: 48000 });
+      try {
+        const source = context.createMediaStreamSource(this.tap.stream);
+        const tap = context.createMediaStreamDestination();
+        source.connect(tap);
+        this.recordingContext = context;
+        this.recordingSource = source;
+        this.recordingTap = tap;
+      } catch (e) {
+        void context.close().catch(() => {});
+        throw e;
+      }
+    }
+    await this.recordingContext.resume();
+    if (this.recordingContext.state !== "running" || !this.recordingTap) {
+      throw new Error("The audio recording stream could not start");
+    }
+    return this.recordingTap.stream;
   }
 
   get running(): boolean {
@@ -71,11 +96,11 @@ export class AudioEngine {
       await this.ctx.resume();
       return;
     }
-    // 48 kHz whatever the device runs at (the browser resamples): the airway's cost grows with
-    // the square of its rate, and a 192 kHz device took ~3x the CPU of 48 kHz and starved the
-    // worklet (load 120-150%, no sound; issue #33)
+    // Keep the airway above its stable simulation rate without spending unnecessary real-time
+    // headroom: performance uses 32 kHz → 64 kHz; high quality uses 36 kHz → 72 kHz.
     preferPlaybackSession();
-    const ctx = new AudioContext({ latencyHint: "interactive", sampleRate: 48000 });
+    const sampleRate = this.audioQuality === "performance" ? 32000 : 36000;
+    const ctx = new AudioContext({ latencyHint: "interactive", sampleRate });
     // resume now, while the tap that called start() is still the current gesture: iOS Safari
     // refuses a resume() that comes after the awaits below (the context stays suspended, silent)
     const resumed = ctx.resume().catch(() => {});
@@ -95,7 +120,7 @@ export class AudioEngine {
     }
     this.node = node;
     const master = ctx.createGain();
-    master.gain.value = 0.8;
+    master.gain.value = this.outputVolume;
     this.master = master;
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 4096;
@@ -158,6 +183,87 @@ export class AudioEngine {
     await resumed;
     // a second chance where the first resume was refused (the result is what callers see)
     await ctx.resume();
+  }
+
+  /** Change render rate; a running context is recreated and its caller reapplies voice state. */
+  async setQuality(quality: AudioQuality): Promise<void> {
+    if (quality === this.audioQuality) return;
+    const previousQuality = this.audioQuality;
+    this.audioQuality = quality;
+    const old = {
+      ctx: this.ctx,
+      node: this.node,
+      analyser: this.analyser,
+      analyserFast: this.analyserFast,
+      analyserScope: this.analyserScope,
+      master: this.master,
+      micIn: this.micIn,
+      tap: this.tap,
+      recordingContext: this.recordingContext,
+      recordingSource: this.recordingSource,
+      recordingTap: this.recordingTap,
+      latest: this.latest,
+      latestAt: this.latestAt,
+      latestCreature: this.latestCreature,
+      load: this.load,
+      lastPlan: this.lastPlan,
+      error: this.error,
+      outputVolume: this.outputVolume,
+    };
+    if (!old.ctx) return;
+
+    old.master?.gain.setTargetAtTime(0, old.ctx.currentTime, 0.01);
+    this.ctx = null;
+    this.node = null;
+    this.analyser = null;
+    this.analyserFast = null;
+    this.analyserScope = null;
+    this.master = null;
+    this.micIn = null;
+    this.tap = null;
+    this.recordingContext = null;
+    this.recordingSource = null;
+    this.recordingTap = null;
+    this.latest = null;
+    this.latestAt = 0;
+    this.latestCreature = null;
+    this.load = 0;
+    this.lastPlan = null;
+    this.error = null;
+    this.outputVolume = 0;
+
+    try {
+      await this.start();
+    } catch (e) {
+      this.audioQuality = previousQuality;
+      this.ctx = old.ctx;
+      this.node = old.node;
+      this.analyser = old.analyser;
+      this.analyserFast = old.analyserFast;
+      this.analyserScope = old.analyserScope;
+      this.master = old.master;
+      this.micIn = old.micIn;
+      this.tap = old.tap;
+      this.recordingContext = old.recordingContext;
+      this.recordingSource = old.recordingSource;
+      this.recordingTap = old.recordingTap;
+      this.latest = old.latest;
+      this.latestAt = old.latestAt;
+      this.latestCreature = old.latestCreature;
+      this.load = old.load;
+      this.lastPlan = old.lastPlan;
+      this.error = old.error;
+      this.outputVolume = old.outputVolume;
+      old.master?.gain.setTargetAtTime(old.outputVolume, old.ctx.currentTime, 0.01);
+      throw e;
+    }
+
+    old.node?.disconnect();
+    old.recordingSource?.disconnect();
+    old.recordingTap?.stream.getTracks().forEach((track) => track.stop());
+    await old.recordingContext?.close().catch((e) => console.warn("Audio context restart: could not close the recording context", e));
+    await old.ctx.close().catch((e) => console.warn("Audio context restart: could not close the previous context", e));
+    this.setVolume(old.outputVolume);
   }
 
   onTelemetry(l: Listener): () => void {
@@ -264,6 +370,7 @@ export class AudioEngine {
   }
 
   setVolume(v: number): void {
+    this.outputVolume = v;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 

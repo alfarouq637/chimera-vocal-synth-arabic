@@ -9,7 +9,7 @@ import { VowelMap } from "./components/VowelMap.tsx";
 import { VoiceControls } from "./components/VoiceControls.tsx";
 import { Keys, MidiButton } from "./components/Keys.tsx";
 import { ActionBar, PrimaryButton } from "./components/ActionBar.tsx";
-import { Segmented, Toggle } from "./components/Controls.tsx";
+import { Menu, Segmented, Toggle } from "./components/Controls.tsx";
 import { Chip, Screen } from "./components/Screen.tsx";
 import { SpeakRight, speechInfo, speechSlots, speechWords } from "./components/SpeakPanel.tsx";
 import { BestiaryRight } from "./components/BestiaryPanel.tsx";
@@ -37,6 +37,9 @@ function TopBar() {
   const started = useStore((s) => s.started);
   const volume = useStore((s) => s.volume);
   const setVolume = useStore((s) => s.setVolume);
+  const audioQuality = useStore((s) => s.audioQuality);
+  const setAudioQuality = useStore((s) => s.setAudioQuality);
+  const starting = useStore((s) => s.starting);
   const mode = useStore((s) => s.mode);
   const setMode = useStore((s) => s.setMode);
   const language = useStore((s) => s.language);
@@ -69,6 +72,16 @@ function TopBar() {
           <span>{t("Volume", language)}</span>
           <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => setVolume(Number(e.target.value))} style={{ "--pos": `${volume * 100}%` } as React.CSSProperties} />
         </label>
+        <Menu
+          label="Audio mode"
+          value={audioQuality}
+          disabled={starting}
+          options={[
+            { value: "performance", label: "Performance" },
+            { value: "high", label: "High quality" },
+          ]}
+          onChange={setAudioQuality}
+        />
         <Segmented<UiLanguage>
           label={t("Arabic / English", language)}
           value={language}
@@ -83,7 +96,7 @@ function TopBar() {
             {t("Engine load", language)} {Math.round(load * 100)} %
           </span>
         )}
-        <a className="repo-link" href="https://github.com/jamesondh/chimera-vocal-synth" target="_blank" rel="noreferrer" aria-label="Source code on GitHub" title="Source code on GitHub">
+        <a className="repo-link" href="https://github.com/alfarouq637/chimera-vocal-synth-arabic" target="_blank" rel="noreferrer" aria-label="Source code on GitHub" title="Source code on GitHub">
           <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
             <path
               fill="currentColor"

@@ -21,9 +21,19 @@ const EXAMPLES = [
   "She sells sea shells by the sea shore.",
   "Every sound here is air moving through a throat.",
   "The quick brown fox jumps over the lazy dog.",
-  "أَنَا اِسْمِي الْفَارُوقُ، وَأُحِبُّ الْغِنَاءَ.",
-  "صَبَاحُ الْخَيْرِ، كَيْفَ حَالُكَ؟",
-  "إِزَّيَّك؟ أَنَا بِخَيْر.",
+  "اِسْمِي الْفَارُوقُ، وَأُطَوِّرُ مَشَارِيعَ بِاسْتِخْدَامِ الذَّكَاءِ الِاصْطِنَاعِيِّ.",
+  "صَبَاحُ الْخَيْرِ، كَيْفَ حَالُكَ الْيَوْمَ؟",
+  "تَتَحَرَّكُ الرِّئَتَانِ، فَيَنْدَفِعُ الْهَوَاءُ عَبْرَ الْحَلْقِ.",
+  "يَتَغَيَّرُ صَوْتِي حِينَ أَرْفَعُ طَبَقَتَهُ.",
+  "هَلْ تَسْمَعُ نَبْرَةَ التَّنَفُّسِ فِي هَذِهِ الْجُمْلَةِ؟",
+  "يَسْتَغْرِقُ النَّفَسُ الْهَادِئُ وَقْتًا أَطْوَلَ مِنَ النَّفَسِ السَّرِيعِ.",
+  "تُسَاعِدُ الْحَرَكَاتُ عَلَى قِرَاءَةِ الْكَلِمَةِ بِوُضُوحٍ.",
+  "يَقْرَأُ الطِّفْلُ قِصَّةً صَغِيرَةً قَبْلَ النَّوْمِ.",
+  "فِي الْحَدِيقَةِ عُصْفُورٌ يُغَرِّدُ فَوْقَ غُصْنٍ أَخْضَرَ.",
+  "مِنْ فَضْلِكَ، تَكَلَّمْ بِبُطْءٍ لِأَفْهَمَ كُلَّ كَلِمَةٍ.",
+  "أُحِبُّ اللُّغَةَ الْعَرَبِيَّةَ وَأَسْتَمْتِعُ بِسَمَاعِ الشِّعْرِ.",
+  "نَسْتَخْدِمُ الذَّكَاءَ الِاصْطِنَاعِيَّ لِبِنَاءِ أَدَوَاتٍ تُفِيدُ النَّاسَ.",
+  "إِزَّيَّكَ؟ أَنَا زَيِّ الْفُلِّ، وَالْحَمْدُ لِلَّهِ.",
 ];
 
 // IPA pulmonic consonant chart (rows = manner, columns = place); empty cells are null
@@ -146,7 +156,7 @@ export function SpeakRight() {
   const language = useStore((s) => s.language);
   const f0 = useStore((s) => s.source.f0);
   const start = useStore((s) => s.start);
-  const [text, setText] = useState(EXAMPLES[0]);
+  const [text, setText] = useState(language === "ar" ? EXAMPLES[4] : EXAMPLES[0]);
   const [ipa, setIpa] = useState(false);
   const [rate, setRate] = useState(1);
   const [dialect, setDialect] = useState<ArabicDialect>("msa");
