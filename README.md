@@ -5,6 +5,10 @@ airway (lungs, vocal folds or syrinx, a branched vocal tract, lips, nose), not f
 The engine is Rust, compiled to WebAssembly for an AudioWorklet; the same code runs natively
 for tests and the `chimera` CLI.
 
+## Live demo
+
+Try the Arabic build on Vercel: [chimera-vocal-synth-arabic.vercel.app](https://chimera-vocal-synth-arabic.vercel.app/).
+
 ## Vision & scope
 
 1. **One instrument**: a physically modeled voice (lungs, vocal folds, throat, mouth). No

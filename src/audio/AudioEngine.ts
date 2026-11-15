@@ -75,7 +75,10 @@ export class AudioEngine {
     // the square of its rate, and a 192 kHz device took ~3x the CPU of 48 kHz and starved the
     // worklet (load 120-150%, no sound; issue #33)
     preferPlaybackSession();
-    const ctx = new AudioContext({ latencyHint: "interactive", sampleRate: 48000 });
+    // The physical model is CPU-heavy; balanced latency gives the worklet more
+    // scheduling headroom on phones and hosted deployments without making live
+    // keyboard interaction feel sluggish.
+    const ctx = new AudioContext({ latencyHint: "balanced", sampleRate: 48000 });
     // resume now, while the tap that called start() is still the current gesture: iOS Safari
     // refuses a resume() that comes after the awaits below (the context stays suspended, silent)
     const resumed = ctx.resume().catch(() => {});
