@@ -54,6 +54,7 @@ describe("tunes", () => {
     const adhan = TUNES.find((t) => t.id === ADHAN_KURD_ID)!;
     expect(adhan.lyrics).toBe(ADHAN_KURD_LYRICS);
     expect(ADHAN_KURD_LYRICS.split("\n")).toHaveLength(12);
+    expect(adhan.phrases.every((phrase) => beats(phrase.map(([, duration]) => ({ beats: duration }))) === 24)).toBe(true);
     expect(adhan.phrases.flat().every(([m]) => ADHAN_KURD_SCALE.includes(m as (typeof ADHAN_KURD_SCALE)[number]))).toBe(true);
     expect(adhan.phrases.every((phrase) => phrase.at(-1)?.[0] === 62)).toBe(true);
   });
