@@ -154,3 +154,37 @@ fn arabic_tts_preserves_question_punctuation_and_mixed_english_words() {
     assert_eq!(phrases[1].words, ["hello"]);
     assert!(phrases[0].segments.iter().any(|s| s.ipa == "a"));
 }
+
+#[test]
+fn optional_recitation_adds_counted_ghunna_and_iqlab_without_changing_default_speech() {
+    let ordinary = arabic::text_to_phrases(
+        "\u{0645}\u{0650}\u{0646}\u{0652} \u{0628}\u{064E}",
+        &EnglishG2P::new(),
+        ArabicDialect::Msa,
+    );
+    let recited = arabic::text_to_phrases_with_recitation(
+        "\u{0645}\u{0650}\u{0646}\u{0652} \u{0628}\u{064E}",
+        &EnglishG2P::new(),
+        ArabicDialect::Msa,
+        arabic::ArabicRecitationOptions { enabled: true, count: 0.1 },
+    );
+    assert!(!ordinary[0].segments.iter().any(|s| s.nasalized == Some(true)));
+    assert!(recited[0].segments.iter().any(|s| s.ipa == "m" && s.nasalized == Some(true)));
+    assert_eq!(recited[0].pause, 0.6);
+
+    let ordinary_n_before_b = arabic::text_to_phrases_with_recitation(
+        "\u{0646}\u{064E} \u{0628}\u{064E}",
+        &EnglishG2P::new(),
+        ArabicDialect::Msa,
+        arabic::ArabicRecitationOptions { enabled: true, count: 0.1 },
+    );
+    assert!(!ordinary_n_before_b[0].segments.iter().any(|s| s.nasalized == Some(true)));
+
+    let idgham_without_ghunna = arabic::text_to_phrases_with_recitation(
+        "\u{0645}\u{0650}\u{0646}\u{0652} \u{0644}\u{064E}",
+        &EnglishG2P::new(),
+        ArabicDialect::Msa,
+        arabic::ArabicRecitationOptions { enabled: true, count: 0.1 },
+    );
+    assert!(!idgham_without_ghunna[0].segments.iter().any(|s| s.ipa == "n"));
+}

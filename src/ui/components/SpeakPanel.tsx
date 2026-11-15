@@ -161,6 +161,7 @@ export function SpeakRight() {
   const [ipa, setIpa] = useState(false);
   const [rate, setRate] = useState(1);
   const [dialect, setDialect] = useState<ArabicDialect>("msa");
+  const [recite, setRecite] = useState(false);
   const [busy, setBusy] = useState(false);
   const [trans, setTrans] = useState(currentPlan()?.transcription ?? "");
   const [vowel, setVowel] = useState("ɑ");
@@ -178,7 +179,7 @@ export function SpeakRight() {
       await start();
       // the audio didn't start (the error shows on the bar): speaking would only light Stop
       if (!useStore.getState().started) return;
-      await speakText(text, { ipa, body, rate, f0, dialect });
+      await speakText(text, { ipa, body, rate, f0, dialect, recite });
     } finally {
       setBusy(false);
     }
@@ -209,6 +210,9 @@ export function SpeakRight() {
           <Slider label="Rate" value={rate} min={0.5} max={1.8} onChange={setRate} format={(v) => `${v.toFixed(2)}×`} />
         </div>
         <Menu label="Arabic pronunciation" value={dialect} options={[{ value: "egyptian", label: "Egyptian" }, { value: "msa", label: "Standard Arabic" }]} onChange={setDialect} />
+        <Chip on={recite} onClick={() => setRecite(!recite)}>
+          Arabic recitation (prototype)
+        </Chip>
         <Chip on={ipa} onClick={() => setIpa(!ipa)}>
           Text is IPA
         </Chip>

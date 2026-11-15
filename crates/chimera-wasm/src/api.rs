@@ -127,6 +127,15 @@ fn dispatch(st: &mut State, req: &Value) -> Res {
         "g2pPhrases" => to_json(&st.g2p.to_phrases(&arg::<String>(req, "text")?)),
         "g2pWord" => to_json(&st.g2p.word(&arg::<String>(req, "word")?, arg::<Option<bool>>(req, "reduce")?.unwrap_or(true))),
         "textToPhrases" => to_json(&arabic::text_to_phrases(&arg::<String>(req, "text")?, &st.g2p, arg::<Option<arabic::ArabicDialect>>(req, "dialect")?.unwrap_or_default())),
+        "textToRecitedPhrases" => to_json(&arabic::text_to_phrases_with_recitation(
+            &arg::<String>(req, "text")?,
+            &st.g2p,
+            arg::<Option<arabic::ArabicDialect>>(req, "dialect")?.unwrap_or_default(),
+            arabic::ArabicRecitationOptions {
+                enabled: true,
+                count: arg::<Option<f64>>(req, "count")?.unwrap_or(0.1).clamp(0.05, 0.2),
+            },
+        )),
         "lyricsToSyllables" => to_json(&syllables::lyrics_to_syllables_with_arabic(&arg::<String>(req, "text")?, &st.g2p, arg::<Option<arabic::ArabicDialect>>(req, "dialect")?.unwrap_or_default())),
         // ---------------------------------------------------------------- creatures
         "creaturePreview" => {

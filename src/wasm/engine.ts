@@ -131,6 +131,11 @@ export function textToPhrases(text: string, dialect: ArabicDialect = "msa"): Phr
   return call("textToPhrases", { text, dialect });
 }
 
+/** Arabic text through the optional counted recitation path. */
+export function textToRecitedPhrases(text: string, dialect: ArabicDialect = "msa", count = 0.1): Phrase[] {
+  return call("textToRecitedPhrases", { text, dialect, count });
+}
+
 // ------------------------------------------------------------------ planning
 
 export interface PlanOptions {

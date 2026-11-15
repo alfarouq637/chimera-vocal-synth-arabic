@@ -15,6 +15,24 @@ pub enum ArabicDialect {
     Egyptian,
 }
 
+/// Controls the optional recitation treatment for fully vowelled Arabic.
+///
+/// This is deliberately separate from the normal Arabic speech path: tajweed is a
+/// reading style, not a dialect, and should never silently change ordinary speech.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ArabicRecitationOptions {
+    /// Enable counted lengthening and context-sensitive nasal reading.
+    pub enabled: bool,
+    /// Seconds per haraka/count. Hafs recitation uses this as the timing unit.
+    pub count: f64,
+}
+
+impl Default for ArabicRecitationOptions {
+    fn default() -> Self {
+        Self { enabled: false, count: 0.1 }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Glyph {
     letter: char,
@@ -23,6 +41,7 @@ struct Glyph {
     shadda: bool,
     tanwin: bool,
     dagger_alif: bool,
+    maddah: bool,
 }
 
 pub fn is_letter(c: char) -> bool {
@@ -30,7 +49,7 @@ pub fn is_letter(c: char) -> bool {
 }
 
 fn is_mark(c: char) -> bool {
-    matches!(c, '\u{064B}'..='\u{065F}' | '\u{0670}')
+    matches!(c, '\u{064B}'..='\u{065F}' | '\u{0670}' | '\u{06E4}')
 }
 
 fn starts(c: char) -> bool {
@@ -56,6 +75,7 @@ fn glyphs(word: &str) -> Vec<Glyph> {
                     '\u{0652}' => g.sukun = true,
                     '\u{0651}' => g.shadda = true,
                     '\u{0670}' => g.dagger_alif = true,
+                    '\u{0653}' | '\u{06E4}' => g.maddah = true,
                     _ => {}
                 }
                 g.tanwin |= matches!(c, '\u{064B}' | '\u{064C}' | '\u{064D}');
@@ -68,6 +88,7 @@ fn glyphs(word: &str) -> Vec<Glyph> {
                 shadda: false,
                 tanwin: false,
                 dagger_alif: false,
+                maddah: false,
             });
         }
     }
@@ -129,6 +150,78 @@ fn push_vowel(out: &mut Vec<Segment>, ipa: &str, long: bool, stress: u8) {
         stress: Some(stress),
         ..Default::default()
     });
+}
+
+fn is_vowel(ipa: &str) -> bool {
+    matches!(ipa, "a" | "i" | "u")
+}
+
+/// Apply the small, deterministic subset of Hafs-style recitation that can be
+/// represented by the existing Segment contract. This intentionally changes
+/// timing and velum behaviour, rather than adding a second voice engine.
+fn apply_recitation(segments: &mut [Segment], count: f64, extended_madd: bool) {
+    let mut extended_madd_used = false;
+    for i in 0..segments.len() {
+        let ipa = segments[i].ipa.as_str();
+        if is_vowel(ipa) {
+            // Existing Arabic long vowels are two counts; explicit maddah marks
+            // request the longer, audibly recited hold.
+            let long = segments[i].dur.is_some_and(|d| d >= 0.17);
+            let extended = extended_madd && long && !extended_madd_used;
+            if extended {
+                extended_madd_used = true;
+            }
+            segments[i].dur = Some(if extended { 4.0 * count } else if long { 2.0 * count } else { count });
+        } else if matches!(ipa, "n" | "m") && segments[i].dur.is_some_and(|d| d >= 0.12) {
+            // Shadda on n/m is the clearest ordinary-text ghunna cue.
+            segments[i].dur = Some(2.0 * count);
+            segments[i].nasalized = Some(true);
+        }
+    }
+
+}
+
+fn final_nasal_is_rule_eligible(word: &str) -> bool {
+    let gs = glyphs(word);
+    gs.last().is_some_and(|g| matches!(g.letter, 'ن' | 'م') && (g.sukun || g.tanwin))
+}
+
+/// Apply cross-word rules only when the written n/m is sākin or tanwīn.
+fn apply_recitation_boundaries(segments: &mut Vec<Segment>, count: f64, eligible: &[bool]) {
+    let mut word = 0usize;
+    let mut i = 0usize;
+    while i + 1 < segments.len() {
+        if !segments[i].word_end.unwrap_or(false) {
+            i += 1;
+            continue;
+        }
+        let applies = eligible.get(word).copied().unwrap_or(false);
+        word += 1;
+        if !applies || !matches!(segments[i].ipa.as_str(), "n" | "m") {
+            i += 1;
+            continue;
+        }
+        let next = segments[i + 1].ipa.as_str();
+        if segments[i].ipa == "n" && next == "b" {
+            segments[i].ipa = "m".into();
+            segments[i].dur = Some(2.0 * count);
+            segments[i].nasalized = Some(true);
+        } else if matches!(next, "l" | "r") {
+            segments.remove(i);
+            continue;
+        } else if matches!(next, "j" | "w" | "m" | "n") {
+            segments.remove(i);
+            segments[i].dur = Some(2.0 * count);
+            segments[i].nasalized = Some(true);
+            continue;
+        } else if segments[i].ipa == "m" && next == "b"
+            || matches!(next, "t" | "θ" | "d" | "ð" | "z" | "s" | "ʃ" | "sˤ" | "dˤ" | "tˤ" | "ðˤ" | "f" | "q" | "k")
+        {
+            segments[i].dur = Some(2.0 * count);
+            segments[i].nasalized = Some(true);
+        }
+        i += 1;
+    }
 }
 
 /// One Arabic word to IPA. Explicit short vowels, sukūn, shadda and tanwīn are read from Unicode
@@ -446,21 +539,38 @@ fn is_punct(c: char) -> bool {
 /// Mixed-script text-to-speech. Arabic tokens are always sent through the Arabic articulatory
 /// front end; Latin tokens keep the existing English G2P and allophone pass.
 pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> Vec<Phrase> {
+    text_to_phrases_with_recitation(text, g2p, dialect, ArabicRecitationOptions::default())
+}
+
+/// Mixed-script text-to-speech with optional recitation timing and nasal rules.
+pub fn text_to_phrases_with_recitation(
+    text: &str,
+    g2p: &EnglishG2P,
+    dialect: ArabicDialect,
+    recitation: ArabicRecitationOptions,
+) -> Vec<Phrase> {
     let mut phrases = Vec::new();
     let mut segments = Vec::new();
     let mut words = Vec::new();
+    let mut boundary_eligible = Vec::new();
     let mut chars = text.chars().peekable();
     let mut delimiter = String::new();
 
     let flush = |segments: &mut Vec<Segment>,
                  words: &mut Vec<String>,
                  delimiter: &str,
-                 phrases: &mut Vec<Phrase>| {
+                 phrases: &mut Vec<Phrase>,
+                 eligible: &[bool]| {
         if segments.is_empty() {
             return;
         }
+        if recitation.enabled {
+            apply_recitation_boundaries(segments, recitation.count, eligible);
+        }
         let question = delimiter.contains('?') || delimiter.contains('؟');
-        let pause = if delimiter.contains('.') || delimiter.contains('!') || question {
+        let pause = if recitation.enabled {
+            0.6
+        } else if delimiter.contains('.') || delimiter.contains('!') || question {
             0.35
         } else if !delimiter.is_empty() {
             0.18
@@ -485,7 +595,8 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
             while chars.peek().is_some_and(|n| is_punct(*n)) {
                 delimiter.push(chars.next().unwrap());
             }
-            flush(&mut segments, &mut words, &delimiter, &mut phrases);
+            flush(&mut segments, &mut words, &delimiter, &mut phrases, &boundary_eligible);
+            boundary_eligible.clear();
             delimiter.clear();
             continue;
         }
@@ -495,9 +606,16 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
                 word.push(chars.next().unwrap());
             }
             let mut ws = word_segments(&word, dialect);
+            if recitation.enabled {
+                let extended_madd = word.chars().any(|c| matches!(c, '\u{0653}' | '\u{06E4}'));
+                apply_recitation(&mut ws, recitation.count, extended_madd);
+            }
             if let Some(last) = ws.last_mut() {
                 last.word_end = Some(true);
                 segments.append(&mut ws);
+                if recitation.enabled {
+                    boundary_eligible.push(final_nasal_is_rule_eligible(&word));
+                }
                 words.push(word);
             }
             continue;
@@ -516,9 +634,12 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
                 apply_allophones(&mut ws);
                 segments.append(&mut ws);
                 words.push(word);
+                if recitation.enabled {
+                    boundary_eligible.push(false);
+                }
             }
         }
     }
-    flush(&mut segments, &mut words, "", &mut phrases);
+    flush(&mut segments, &mut words, "", &mut phrases, &boundary_eligible);
     phrases
 }
