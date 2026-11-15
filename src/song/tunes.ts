@@ -20,6 +20,10 @@ export interface Tune {
 
 export const TALA_AL_BADRU_ID = "tala-al-badru";
 export const SAWT_SAFIR_AL_BULBUL_ID = "sawt-safir-al-bulbul";
+export const ADHAN_KURD_ID = "adhan-kurd";
+
+/** D Kurd in the project's equal-tempered MIDI representation: D, Eb, F, G, A, Bb, C. */
+export const ADHAN_KURD_SCALE = [62, 63, 65, 67, 69, 70, 72] as const;
 
 export const TALA_AL_BADRU_LYRICS = [
   "طَلَعَ الْبَدْرُ عَلَيْنَا",
@@ -93,6 +97,21 @@ export const SAWT_SAFIR_AL_BULBUL_LYRICS = [
   "صَوْتُ صَفِيرِ الْبُلْبُلِ",
 ].join("\n");
 
+export const ADHAN_KURD_LYRICS = [
+  "اللَّهُ أَكْبَرُ اللَّهُ أَكْبَرُ",
+  "اللَّهُ أَكْبَرُ اللَّهُ أَكْبَرُ",
+  "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ",
+  "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ",
+  "أَشْهَدُ أَنَّ مُحَمَّدًا رَسُولُ اللَّهِ",
+  "أَشْهَدُ أَنَّ مُحَمَّدًا رَسُولُ اللَّهِ",
+  "حَيَّ عَلَى الصَّلَاةِ",
+  "حَيَّ عَلَى الصَّلَاةِ",
+  "حَيَّ عَلَى الْفَلَاحِ",
+  "حَيَّ عَلَى الْفَلَاحِ",
+  "اللَّهُ أَكْبَرُ اللَّهُ أَكْبَرُ",
+  "لَا إِلَهَ إِلَّا اللَّهُ",
+].join("\n");
+
 /** the demo songs the moods take their melodies from */
 const borrowed = new Set<string>();
 
@@ -164,6 +183,29 @@ const MOODS: Tune[] = [
 ];
 
 const ARABIC_TUNES: Tune[] = [
+  {
+    id: ADHAN_KURD_ID,
+    name: "Adhan — Maqam Kurd (D)",
+    bpm: 72,
+    octave: { male: -1, female: 0, child: 0 },
+    // The melody stays in D Kurd (D–Eb–F–G–A–Bb–C), resolves each phrase to D,
+    // and uses the upper four notes as the Nahawand jins on G.
+    phrases: [
+      [[62, 1], [63, 1], [65, 1], [67, 1], [65, 1], [63, 1], [62, 2]],
+      [[62, 1], [65, 1], [67, 1], [69, 1], [67, 1], [65, 1], [62, 2]],
+      [[62, 0.5], [63, 0.5], [65, 1], [67, 1], [69, 1], [67, 1], [65, 1], [62, 2]],
+      [[62, 0.5], [63, 0.5], [65, 1], [67, 1], [69, 1], [70, 1], [69, 1], [62, 2]],
+      [[62, 0.5], [63, 0.5], [65, 1], [67, 1], [69, 1], [70, 1], [72, 1], [62, 2]],
+      [[62, 0.5], [63, 0.5], [65, 1], [67, 1], [69, 1], [70, 1], [69, 1], [62, 2]],
+      [[67, 1], [69, 1], [70, 1], [69, 1], [67, 1], [65, 1], [62, 2]],
+      [[67, 1], [69, 1], [70, 1], [69, 1], [67, 1], [65, 1], [62, 2]],
+      [[65, 1], [67, 1], [69, 1], [70, 1], [69, 1], [67, 1], [62, 2]],
+      [[65, 1], [67, 1], [69, 1], [70, 1], [69, 1], [65, 1], [62, 2]],
+      [[62, 1], [63, 1], [65, 1], [67, 1], [65, 1], [63, 1], [62, 2]],
+      [[65, 1], [63, 1], [62, 1], [63, 1], [65, 1], [63, 1], [62, 2]],
+    ],
+    lyrics: ADHAN_KURD_LYRICS,
+  },
   {
     id: TALA_AL_BADRU_ID,
     name: "Tala al-Badru — Nasheed",

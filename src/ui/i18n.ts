@@ -107,6 +107,7 @@ const ar: Record<string, string> = {
   "Arabic song: home": "أغنية عربية: البيت",
   "Nasheed: Tala al-Badru": "نشيد: طَلَعَ الْبَدْرُ عَلَيْنَا",
   "Poem: Sawt Safir al-Bulbul": "قصيدة: صَوْتُ صَفِيرِ الْبُلْبُلِ",
+  "Adhan: Maqam Kurd": "الأذان: مقام الكرد",
   "Tala al-Badru — Nasheed": "طَلَعَ الْبَدْرُ — إِنْشَادٌ",
   "Sawt Safir — Rhythmic Recitation": "صَوْتُ صَفِيرِ الْبُلْبُلِ — إِلْقَاءٌ إِيقَاعِيٌّ",
   "English song: morning": "أغنية إنجليزية: الصباح",

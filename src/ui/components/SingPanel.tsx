@@ -15,7 +15,7 @@ import { EncoderPages } from "./Encoder.tsx";
 import { noteName } from "./VoiceControls.tsx";
 import type { InfoFn } from "./AnatomyView.tsx";
 import { translate as t } from "../i18n.ts";
-import { SAWT_SAFIR_AL_BULBUL_ID, SAWT_SAFIR_AL_BULBUL_LYRICS, TALA_AL_BADRU_ID, TALA_AL_BADRU_LYRICS } from "../../song/tunes.ts";
+import { ADHAN_KURD_ID, ADHAN_KURD_LYRICS, SAWT_SAFIR_AL_BULBUL_ID, SAWT_SAFIR_AL_BULBUL_LYRICS, TALA_AL_BADRU_ID, TALA_AL_BADRU_LYRICS } from "../../song/tunes.ts";
 
 /** epilarynx narrowing for the singer's ring (measured: +3 to +12 dB at 2.4–3.6 kHz, adult male) */
 const RING = 0.85;
@@ -25,6 +25,7 @@ const LYRIC_EXAMPLES = [
   { value: "night", label: "Arabic song: night", tune: "somber", text: "يَا لَيْلُ يَا عَيْنُ\nغَنِّي مَعِي وَاسْمَعْ صَوْتِي" },
   { value: "garden", label: "Arabic song: garden", tune: "joyful", text: "فِي الْحَدِيقَةِ زَهْرَةٌ\nتَحْكِي لَنَا لَوْنَ الرَّبِيعِ" },
   { value: "home", label: "Arabic song: home", tune: "gentle", text: "بَيْتِي دَفِيءٌ وَالْقُلُوبُ قَرِيبَةٌ\nفِيهِ الْمَوَدَّةُ وَالسَّلَامُ" },
+  { value: ADHAN_KURD_ID, label: "Adhan: Maqam Kurd", tune: ADHAN_KURD_ID, text: ADHAN_KURD_LYRICS },
   { value: TALA_AL_BADRU_ID, label: "Nasheed: Tala al-Badru", tune: TALA_AL_BADRU_ID, text: TALA_AL_BADRU_LYRICS },
   { value: SAWT_SAFIR_AL_BULBUL_ID, label: "Poem: Sawt Safir al-Bulbul", tune: SAWT_SAFIR_AL_BULBUL_ID, text: SAWT_SAFIR_AL_BULBUL_LYRICS },
   { value: "morning-en", label: "English song: morning", tune: "dreamy", text: "Morning light is on the wall\nWake and hear the songbirds call" },

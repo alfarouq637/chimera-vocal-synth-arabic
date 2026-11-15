@@ -7,7 +7,7 @@ import { initEngine } from "./harness.ts";
 
 await initEngine();
 const { lyricsToSyllables, textToPhrases } = await import("../src/wasm/engine.ts");
-const { SAWT_SAFIR_AL_BULBUL_ID, SAWT_SAFIR_AL_BULBUL_LYRICS, TALA_AL_BADRU_ID, TALA_AL_BADRU_LYRICS, TUNES } = await import("../src/song/tunes.ts");
+const { ADHAN_KURD_ID, ADHAN_KURD_LYRICS, ADHAN_KURD_SCALE, SAWT_SAFIR_AL_BULBUL_ID, SAWT_SAFIR_AL_BULBUL_LYRICS, TALA_AL_BADRU_ID, TALA_AL_BADRU_LYRICS, TUNES } = await import("../src/song/tunes.ts");
 const { fitLine, fitSong, lines, phraseSize, la } = await import("../src/song/fit.ts");
 type SungNote = import("../src/wasm/types.ts").SungNote;
 type Syllable = import("../src/wasm/types.ts").Syllable;
@@ -48,6 +48,14 @@ describe("tunes", () => {
     expect(fitted.from[0]).toBe(0);
     expect(Math.max(...fitted.from)).toBe(syls.length - 1);
     expect(fitted.notes.filter((n) => n.syl.phraseEnd).length).toBe(lines(syls, phraseSize(poem)).length);
+  });
+
+  test("the adhan demo stays in D Kurd and resolves every phrase to D", () => {
+    const adhan = TUNES.find((t) => t.id === ADHAN_KURD_ID)!;
+    expect(adhan.lyrics).toBe(ADHAN_KURD_LYRICS);
+    expect(ADHAN_KURD_LYRICS.split("\n")).toHaveLength(12);
+    expect(adhan.phrases.flat().every(([m]) => ADHAN_KURD_SCALE.includes(m as (typeof ADHAN_KURD_SCALE)[number]))).toBe(true);
+    expect(adhan.phrases.every((phrase) => phrase.at(-1)?.[0] === 62)).toBe(true);
   });
 
   test("the poem defaults to a slower recitation and uses the singular nose", () => {
