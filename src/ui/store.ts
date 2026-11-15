@@ -147,7 +147,7 @@ export const useStore = create<State>((set, get) => ({
   view: { pressure: true, particles: true, grid: false, calipers: true, threeD: false },
   // the app opens on Sing: hearing a song is the quickest way in (the plugin opens there too)
   mode: "sing",
-  language: "en",
+  language: "ar",
   setLanguage: (language) => set({ language }),
   setMode: (m) => {
     const prev = get().mode;

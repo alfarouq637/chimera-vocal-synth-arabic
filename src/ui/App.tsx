@@ -83,7 +83,7 @@ function TopBar() {
             {t("Engine load", language)} {Math.round(load * 100)} %
           </span>
         )}
-        <a className="repo-link" href="https://github.com/jamesondh/chimera-vocal-synth" target="_blank" rel="noreferrer" aria-label="Source code on GitHub" title="Source code on GitHub">
+        <a className="repo-link" href="https://github.com/alfarouq637/chimera-vocal-synth-arabic" target="_blank" rel="noreferrer" aria-label="Source code on GitHub" title="Source code on GitHub">
           <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
             <path
               fill="currentColor"
@@ -197,7 +197,7 @@ export function App() {
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
-    document.title = "CHIMERA";
+    document.title = language === "ar" ? "شيما - النسخة العربية" : "CHIMERA";
   }, [language]);
   if (show)
     return (
