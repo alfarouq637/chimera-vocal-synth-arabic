@@ -156,6 +156,31 @@ fn is_vowel(ipa: &str) -> bool {
     matches!(ipa, "a" | "i" | "u")
 }
 
+fn is_heavy_ipa(ipa: &str) -> bool {
+    matches!(ipa, "sˤ" | "zˤ" | "tˤ" | "dˤ" | "ðˤ" | "q" | "x" | "ɣ")
+}
+
+fn mark_arabic_secondary_articulation(out: &mut [Segment], word: &str) {
+    let gs = glyphs(word);
+    let allah = gs.windows(4).any(|w| {
+        w.iter().map(|g| g.letter).collect::<Vec<_>>()
+            == ['\u{0627}', '\u{0644}', '\u{0644}', '\u{0647}']
+    });
+    for i in 0..out.len() {
+        let heavy = is_heavy_ipa(&out[i].ipa)
+            || (allah && out[i].ipa == "l")
+            || (out[i].ipa == "ɾ" && out.get(i + 1).is_some_and(|s| s.ipa == "a" || s.ipa == "u"));
+        if !heavy {
+            continue;
+        }
+        for j in [i.wrapping_sub(1), i + 1] {
+            if j < out.len() && is_vowel(&out[j].ipa) {
+                out[j].pharyngealized = Some(true);
+            }
+        }
+    }
+}
+
 /// Apply the small, deterministic subset of Hafs-style recitation that can be
 /// represented by the existing Segment contract. This intentionally changes
 /// timing and velum behaviour, rather than adding a second voice engine.
@@ -397,6 +422,7 @@ pub fn word_segments(word: &str, dialect: ArabicDialect) -> Vec<Segment> {
             out[i + 1].pharyngealized = Some(true);
         }
     }
+    mark_arabic_secondary_articulation(&mut out, word);
     out
 }
 

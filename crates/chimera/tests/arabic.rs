@@ -143,6 +143,18 @@ fn emphatics_retract_the_tongue_body_in_adjacent_arabic_vowels() {
 }
 
 #[test]
+fn arabic_heavy_contexts_retract_adjacent_vowels() {
+    for word in [
+        "\u{0642}\u{064E}\u{0644}\u{064E}",
+        "\u{062E}\u{064E}\u{0631}\u{064E}",
+        "\u{0627}\u{0644}\u{0644}\u{064E}\u{0647}",
+    ] {
+        let segments = arabic::word_segments(word, ArabicDialect::Msa);
+        assert!(segments.iter().any(|s| s.pharyngealized == Some(true)), "{word:?}");
+    }
+}
+
+#[test]
 fn arabic_tts_preserves_question_punctuation_and_mixed_english_words() {
     let phrases = arabic::text_to_phrases("كَتَبَ؟ hello.", &EnglishG2P::new(), ArabicDialect::Msa);
     assert_eq!(phrases.len(), 2);
