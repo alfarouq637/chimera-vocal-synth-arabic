@@ -164,6 +164,7 @@ const MOODS: Tune[] = [
 ];
 
 const ARABIC_TUNES: Tune[] = [
+  /*
   {
     id: TALA_AL_BADRU_ID,
     name: "Tala al-Badru — Nasheed",
@@ -177,6 +178,7 @@ const ARABIC_TUNES: Tune[] = [
     ],
     lyrics: TALA_AL_BADRU_LYRICS,
   },
+  */
   {
     id: SAWT_SAFIR_AL_BULBUL_ID,
     name: "Sawt Safir — Rhythmic Recitation",

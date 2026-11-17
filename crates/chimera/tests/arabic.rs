@@ -1,7 +1,7 @@
 use chimera::phonetics::arabic::{self, ArabicDialect};
 use chimera::phonetics::english::EnglishG2P;
 use chimera::phonetics::planner::{PlanOptions, plan_utterance};
-use chimera::phonetics::syllables::lyrics_to_syllables_with_arabic;
+use chimera::phonetics::syllables::{FrontEnd, lyrics_to_syllables_with_arabic};
 use chimera::{anatomy::human::ArticKey, control::score::ControlKey};
 
 fn ipa(segs: &[chimera::phonetics::Segment]) -> Vec<&str> {
@@ -153,4 +153,34 @@ fn arabic_tts_preserves_question_punctuation_and_mixed_english_words() {
     assert_eq!(phrases[0].words, ["كَتَبَ"]);
     assert_eq!(phrases[1].words, ["hello"]);
     assert!(phrases[0].segments.iter().any(|s| s.ipa == "a"));
+}
+
+#[test]
+fn ordinary_alif_lam_is_not_assimilated() {
+    for word in ["\u{0642}\u{064e}\u{0627}\u{0644}\u{064e}\u{062a}\u{0652}",
+        "\u{062e}\u{064e}\u{0627}\u{0644}\u{0650}\u{062f}",
+        "\u{0648}\u{064e}\u{0627}\u{0644}\u{0650}\u{062f}"] {
+        assert!(ipa(&arabic::word_segments(word, ArabicDialect::Msa)).contains(&"l"));
+    }
+}
+
+#[test]
+fn ta_marbuta_is_short_in_pause_and_at_before_case_vowel() {
+    let pause_segments = arabic::word_segments("\u{0645}\u{064e}\u{062f}\u{0631}\u{064e}\u{0633}\u{064e}\u{0629}", ArabicDialect::Msa);
+    let pause = ipa(&pause_segments);
+    assert_eq!(pause.last(), Some(&"a"));
+    assert!(!arabic::word_segments("\u{0645}\u{064e}\u{062f}\u{0631}\u{064e}\u{0633}\u{064e}\u{0629}", ArabicDialect::Msa).iter().any(|s| s.dur == Some(0.18)));
+    let case_segments = arabic::word_segments("\u{0645}\u{064e}\u{062f}\u{0631}\u{064e}\u{0633}\u{064e}\u{0629}\u{064f}", ArabicDialect::Msa);
+    let case_form = ipa(&case_segments);
+    assert!(case_form.windows(2).any(|pair| pair == ["t", "u"]));
+}
+
+#[test]
+fn arabic_stress_and_onsets_follow_msa_rules() {
+    let kataba = arabic::word_segments("\u{0643}\u{064e}\u{062a}\u{064e}\u{0628}\u{064e}", ArabicDialect::Msa);
+    assert_eq!(kataba.iter().position(|s| s.stress == Some(1)), Some(1));
+    let maktab = chimera::phonetics::arabic::ArabicFrontEnd(ArabicDialect::Msa)
+        .word("\u{0645}\u{064e}\u{0643}\u{0652}\u{062a}\u{064e}\u{0628}");
+    assert_eq!(maktab.len(), 2);
+    assert_eq!(maktab[0].coda.last().map(|s| s.ipa.as_str()), Some("k"));
 }
