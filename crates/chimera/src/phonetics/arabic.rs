@@ -152,8 +152,12 @@ pub fn word_segments(word: &str, dialect: ArabicDialect) -> Vec<Segment> {
     for (i, g) in gs.iter().enumerate() {
         let next = gs.get(i + 1).map(|n| n.letter);
         let previous = i.checked_sub(1).and_then(|j| gs.get(j)).map(|p| p.letter);
-        let article_lam =
-            g.letter == 'ل' && previous == Some('ا') && next.is_some_and(is_sun_letter);
+        // Assimilation belongs to the definite article at the start of a word.
+        // A lām after an ordinary alif is a real consonant.
+        let article_lam = i == 1
+            && g.letter == 'ل'
+            && previous == Some('ا')
+            && next.is_some_and(is_sun_letter);
         let sun_assimilated =
             i >= 2 && gs[i - 1].letter == 'ل' && gs[i - 2].letter == 'ا' && is_sun_letter(g.letter);
         if article_lam {
@@ -239,9 +243,13 @@ pub fn word_segments(word: &str, dialect: ArabicDialect) -> Vec<Segment> {
             }
             continue;
         }
-        if g.letter == 'ة' && next.is_none() {
-            vowel = Some("a");
-            long = true;
+        if g.letter == 'ة' {
+            // Tāʾ marbūṭa is /a/ in pause, and /at/ before a case vowel.
+            if g.vowel.is_some() {
+                out.push(Segment::new("t"));
+            }
+            vowel = Some(g.vowel.unwrap_or("a"));
+            long = false;
         }
 
         if let Some(v) = vowel {
@@ -274,14 +282,22 @@ pub fn word_segments(word: &str, dialect: ArabicDialect) -> Vec<Segment> {
         .map(|(i, _)| i)
         .collect();
     if let Some(&last) = vowels.last() {
-        let last_heavy = out
-            .get(last + 1)
-            .is_some_and(|s| s.ipa != "a" && s.ipa != "i" && s.ipa != "u")
-            || out[last].dur.is_some();
-        let stress = if last_heavy || vowels.len() == 1 {
+        let is_heavy = |index: usize| {
+            if out[index].dur.is_some() {
+                return true;
+            }
+            let Some(next) = out.get(index + 1) else { return false };
+            !is_vowel_segment(next)
+                && !out[index + 2..].iter().any(is_vowel_segment)
+        };
+        let stress = if is_heavy(last) {
             last
-        } else {
+        } else if vowels.len() > 1 && is_heavy(vowels[vowels.len() - 2]) {
             vowels[vowels.len() - 2]
+        } else if vowels.len() > 2 {
+            vowels[vowels.len() - 3]
+        } else {
+            vowels[0]
         };
         out[stress].stress = Some(1);
         for &i in &vowels {
@@ -400,7 +416,8 @@ impl FrontEnd for ArabicFrontEnd {
 
     fn word(&self, word: &str) -> Vec<Syllable> {
         let segs = word_segments(word, self.0);
-        let parts = syllabify_with(&segs, |cluster| {
+        let parts = syllabify_with(&segs, |cluster| cluster.len() == 1);
+        /*
             cluster.len() == 1
                 || cluster.first().is_some_and(|s| {
                     matches!(
@@ -421,6 +438,7 @@ impl FrontEnd for ArabicFrontEnd {
                     )
                 })
         });
+        */
         let spell = spelling_parts(word, parts.len());
         parts
             .into_iter()

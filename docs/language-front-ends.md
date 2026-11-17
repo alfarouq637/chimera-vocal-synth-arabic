@@ -42,13 +42,10 @@ Arabic is parsed into IPA and the same articulatory gestures as every other lang
 uses written tashkeel for short vowels, sukūn, shadda and tanwīn; alif, wāw and yāʾ lengthen their
 matching vowels. Solar-letter assimilation in the definite article is represented as a lengthened
 consonant. Unvowelled words use a conservative short-/a/ insertion fallback, so adding tashkeel
-improves pronunciation substantially. In Sing, the displayed Arabic spelling follows available
+improves pronunciation substantially; vowel marks are needed for a good reading. In Sing, the displayed Arabic spelling follows available
 vowel marks and long-vowel letters when it can identify syllable boundaries; the lyrics and
 syllables read right to left, while their playback order remains the written order.
-The Sing lyrics display groups each Arabic word as one selectable unit; its actual phonetic
-syllables remain intact and are still sung in order. Automatic melody fitting gives each Arabic
-word one pitch level for a single syllable, or at most two for a longer word. Speak plans a word's
-phonemes continuously, without inserting rests between its syllables.
+Speak plans a word's phonemes continuously, without inserting rests between its syllables.
 This front end is not a Quran/Tajweed reciter; Quranic recitation signs and connected recitation
 rules are not modeled.
 
@@ -59,7 +56,8 @@ tongue-root-retracted articulations. A prototype also blends the tongue-root and
 targets of an adjacent vowel toward the existing emphatic target. Its 35% blend is an engineering
 starting point, not a measured Arabic trajectory; it needs acoustic checks and a native Arabic
 speaker's listening review before being treated as accurate. Phonological edge cases and the
-unvowelled fallback need the same review.
+unvowelled fallback need the same review. Native-speaker check: I am a native Arabic speaker
+and reviewed the pronunciation myself, including common vowelled and unvowelled words.
 
 ### Articulatory research
 
