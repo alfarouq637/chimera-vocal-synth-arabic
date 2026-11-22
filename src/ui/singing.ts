@@ -33,7 +33,7 @@ export const roll: { notes: RollNote[] } = { notes: [] };
 
 export const DEFAULT_LYRICS = "Hello there, I am a voice made of air.";
 /** the opening words in each language (choosing the other language swaps one for the other) */
-const DEFAULT_LYRICS_OF: Record<Lang, string> = { en: DEFAULT_LYRICS, tr: "Merhaba, ben havadan yapılmış bir sesim." };
+const DEFAULT_LYRICS_OF: Record<Lang, string> = { en: DEFAULT_LYRICS, tr: "Merhaba, ben havadan yapılmış bir sesim.", ar: "صَوْتٌ وَاضِحٌ يَتَحَرَّكُ فِي الْهَوَاءِ." };
 
 /** sung when the lyrics are empty */
 const AH: Syllable = { text: "ah", onset: [], nucleus: { ipa: "ɑ", stress: 1 }, coda: [], wordEnd: true, phraseEnd: false };
