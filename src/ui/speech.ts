@@ -4,7 +4,7 @@
  */
 import { create } from "zustand";
 import { inPlugin } from "../audio/pluginBridge.ts";
-import type { BodyMix } from "../wasm/types.ts";
+import type { ArabicDialect, BodyMix } from "../wasm/types.ts";
 import { EnglishG2P, MandarinLexicon, textToPhrases, turkishPhrases, type Lang, type Phrase } from "../wasm/engine.ts";
 import { tokenizeIpa } from "../wasm/engine.ts";
 import { planPhrases, type Plan, type Segment } from "../wasm/engine.ts";
@@ -92,12 +92,12 @@ export function speakPhrases(phrases: { segments: Segment[]; intonation?: "state
 }
 
 /** Say text: IPA, or words read as `lang` (English unless said). */
-export async function speakText(text: string, o: { ipa: boolean; lang?: Lang; body: BodyMix; rate: number; f0: number }): Promise<SpokenPlan | null> {
+export async function speakText(text: string, o: { ipa: boolean; lang?: Lang; dialect?: ArabicDialect; body: BodyMix; rate: number; f0: number }): Promise<SpokenPlan | null> {
   if (!text.trim()) return null;
   let phrases: Phrase[];
   if (o.ipa) phrases = ipaToPhrases(text);
   else if (o.lang === "tr") phrases = turkishPhrases(text);
-  else if (o.lang === "ar") phrases = textToPhrases(text);
+  else if (o.lang === "ar") phrases = textToPhrases(text, o.dialect);
   else {
     try {
       await g2p.load();

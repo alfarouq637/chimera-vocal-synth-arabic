@@ -18,19 +18,7 @@ export interface Tune {
   lyrics?: string;
 }
 
-export const TALA_AL_BADRU_ID = "tala-al-badru";
 export const SAWT_SAFIR_AL_BULBUL_ID = "sawt-safir-al-bulbul";
-
-export const TALA_AL_BADRU_LYRICS = [
-  "طَلَعَ الْبَدْرُ عَلَيْنَا",
-  "مِنْ ثَنِيَّاتِ الْوَدَاعِ",
-  "وَجَبَ الشُّكْرُ عَلَيْنَا",
-  "مَا دَعَا لِلَّهِ دَاعٍ",
-  "أَيُّهَا الْمَبْعُوثُ فِينَا",
-  "جِئْتَ بِالْأَمْرِ الْمُطَاعِ",
-  "جِئْتَ شَرَّفْتَ الْمَدِينَةَ",
-  "مَرْحَبًا يَا خَيْرَ دَاعٍ",
-].join("\n");
 
 export const SAWT_SAFIR_AL_BULBUL_LYRICS = [
   "صَوْتُ صَفِيرِ الْبُلْبُلِ",
@@ -164,21 +152,6 @@ const MOODS: Tune[] = [
 ];
 
 const ARABIC_TUNES: Tune[] = [
-  /*
-  {
-    id: TALA_AL_BADRU_ID,
-    name: "Tala al-Badru — Nasheed",
-    bpm: 88,
-    octave: { male: -1, female: 0, child: 0 },
-    phrases: [
-      [[62, 0.5], [64, 0.5], [65, 1], [67, 0.5], [69, 0.5], [67, 1], [65, 1], [64, 2]],
-      [[62, 0.5], [64, 0.5], [65, 1], [67, 0.5], [69, 0.5], [67, 1], [65, 1], [62, 2]],
-      [[65, 0.5], [67, 0.5], [69, 1], [69, 0.5], [71, 0.5], [72, 1], [71, 1], [69, 2]],
-      [[67, 0.5], [69, 0.5], [71, 1], [69, 0.5], [67, 0.5], [65, 1], [64, 1], [62, 2]],
-    ],
-    lyrics: TALA_AL_BADRU_LYRICS,
-  },
-  */
   {
     id: SAWT_SAFIR_AL_BULBUL_ID,
     name: "Sawt Safir — Rhythmic Recitation",

@@ -319,25 +319,7 @@ pub fn read_lyrics(text: &str, front_ends: &[&dyn FrontEnd]) -> Vec<Syllable> {
 /// dictionary: every built-in front end but Mandarin's characters (they need its lexicon; see
 /// [`lyrics_to_syllables_with`]).
 pub fn lyrics_to_syllables(text: &str, g2p: &impl WordSource) -> Vec<Syllable> {
-    lyrics_to_syllables_with_arabic(text, g2p, ArabicDialect::default())
-}
-
-pub fn lyrics_to_syllables_with_arabic(
-    text: &str,
-    g2p: &impl WordSource,
-    dialect: ArabicDialect,
-) -> Vec<Syllable> {
-    lyrics_to_syllables_with_arabic_and_mandarin(text, g2p, &MandarinLexicon::new(), dialect)
-}
-
-fn lyrics_to_syllables_with_arabic_and_mandarin(
-    text: &str,
-    g2p: &impl WordSource,
-    zh: &MandarinLexicon,
-    dialect: ArabicDialect,
-) -> Vec<Syllable> {
-    let arabic = ArabicFrontEnd(dialect);
-    lyrics_in_with_frontends(text, g2p, zh, Lang::En, &arabic)
+    lyrics_in(text, g2p, &MandarinLexicon::new(), Lang::En)
 }
 
 /// Lyrics → sung syllables through every built-in front end: pinyin (only words with tones; before
@@ -365,17 +347,17 @@ pub enum Lang {
 /// (empty: Han characters are skipped). The one list the app, the wasm engine and the CLI all read
 /// lyrics through, so a new front end can't be missing from one of them.
 pub fn lyrics_in(text: &str, g2p: &impl WordSource, zh: &MandarinLexicon, lang: Lang) -> Vec<Syllable> {
-    let arabic = ArabicFrontEnd(ArabicDialect::default());
-    lyrics_in_with_frontends(text, g2p, zh, lang, &arabic)
+    lyrics_in_with_dialect(text, g2p, zh, lang, ArabicDialect::default())
 }
 
-fn lyrics_in_with_frontends(
+pub fn lyrics_in_with_dialect(
     text: &str,
     g2p: &impl WordSource,
     zh: &MandarinLexicon,
     lang: Lang,
-    arabic: &ArabicFrontEnd,
+    dialect: ArabicDialect,
 ) -> Vec<Syllable> {
+    let arabic = ArabicFrontEnd(dialect);
     match lang {
         Lang::En => read_lyrics(text, &[&Pinyin, &English(g2p), &Korean, &Russian, &Japanese, &Mandarin(zh), arabic]),
         Lang::Tr => read_lyrics(text, &[&Pinyin, &Turkish, &Korean, &Russian, &Japanese, &Mandarin(zh), arabic]),

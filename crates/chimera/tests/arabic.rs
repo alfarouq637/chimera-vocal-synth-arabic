@@ -1,7 +1,8 @@
 use chimera::phonetics::arabic::{self, ArabicDialect};
 use chimera::phonetics::english::EnglishG2P;
+use chimera::phonetics::mandarin::MandarinLexicon;
 use chimera::phonetics::planner::{PlanOptions, plan_utterance};
-use chimera::phonetics::syllables::{FrontEnd, lyrics_to_syllables_with_arabic};
+use chimera::phonetics::syllables::{FrontEnd, Lang, lyrics_in_with_dialect};
 use chimera::{anatomy::human::ArticKey, control::score::ControlKey};
 
 fn ipa(segs: &[chimera::phonetics::Segment]) -> Vec<&str> {
@@ -69,7 +70,7 @@ fn dialect_changes_arabic_phonology_without_changing_script_routing() {
     );
 
     let g2p = EnglishG2P::new();
-    let syllables = lyrics_to_syllables_with_arabic("كَتَبَ hello", &g2p, ArabicDialect::Egyptian);
+    let syllables = lyrics_in_with_dialect("كَتَبَ hello", &g2p, &MandarinLexicon::new(), Lang::Ar, ArabicDialect::Egyptian);
     assert!(
         syllables
             .iter()
@@ -84,15 +85,17 @@ fn dialect_changes_arabic_phonology_without_changing_script_routing() {
 
 #[test]
 fn arabic_lyrics_keep_syllables_on_written_letter_boundaries() {
-    let syllables = lyrics_to_syllables_with_arabic(
+    let syllables = lyrics_in_with_dialect(
         "أنا اسمي الفاروق",
         &EnglishG2P::new(),
+        &MandarinLexicon::new(),
+        Lang::Ar,
         ArabicDialect::Egyptian,
     );
     let spelling: Vec<&str> = syllables.iter().map(|s| s.text.as_str()).collect();
     assert_eq!(spelling, ["أ", "نا", "اس", "مي", "ال", "فا", "روق"]);
 
-    let marked = lyrics_to_syllables_with_arabic("كَتَبَ", &EnglishG2P::new(), ArabicDialect::Msa);
+    let marked = lyrics_in_with_dialect("كَتَبَ", &EnglishG2P::new(), &MandarinLexicon::new(), Lang::Ar, ArabicDialect::Msa);
     let spelling: Vec<&str> = marked.iter().map(|s| s.text.as_str()).collect();
     assert_eq!(spelling, ["كَ", "تَ", "بَ"]);
 }
