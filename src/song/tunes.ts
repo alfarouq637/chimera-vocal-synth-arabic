@@ -20,6 +20,7 @@ export interface Tune {
 
 export const SAWT_SAFIR_AL_BULBUL_ID = "sawt-safir-al-bulbul";
 
+// Text from al-Itlīdī's collection; wording and vowel marks are adapted for this demo.
 export const SAWT_SAFIR_AL_BULBUL_LYRICS = [
   "صَوْتُ صَفِيرِ الْبُلْبُلِ",
   "هَيَّجَ قَلْبِيَ الثَّمِلَ",

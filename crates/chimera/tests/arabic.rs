@@ -116,6 +116,8 @@ fn emphatic_letters_keep_a_separate_retracted_tongue_articulation() {
         ipa(&chimera::phonetics::ipa::tokenize_ipa("sˤ tˤ")),
         ["sˤ", "tˤ"]
     );
+    assert_eq!(ipa(&chimera::phonetics::ipa::tokenize_ipa("sˤa")), ["sˤ", "a"]);
+    assert_eq!(ipa(&chimera::phonetics::ipa::tokenize_ipa("s ˤa")), ["s", "a"]);
     assert!(chimera::phonetics::ipa::skipped_ipa("sˤ").is_empty());
 }
 
@@ -156,6 +158,10 @@ fn arabic_tts_preserves_question_punctuation_and_mixed_english_words() {
     assert_eq!(phrases[0].words, ["كَتَبَ"]);
     assert_eq!(phrases[1].words, ["hello"]);
     assert!(phrases[0].segments.iter().any(|s| s.ipa == "a"));
+    let mixed = arabic::text_to_phrases("hello 12 I’m مَرْحَبًا", &EnglishG2P::new(), ArabicDialect::Msa);
+    let words: Vec<String> = mixed.into_iter().flat_map(|p| p.words).collect();
+    assert!(words.iter().any(|w| w == "twelve"));
+    assert!(words.iter().any(|w| w == "I'm"));
 }
 
 #[test]

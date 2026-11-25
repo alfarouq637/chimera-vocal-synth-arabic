@@ -137,7 +137,7 @@ fn dispatch(st: &mut State, req: &Value) -> Res {
         // every built-in front end: pinyin, English or Turkish (`lang`, the language of
         // Latin-script words; unset: English), Korean, Russian, and Mandarin once its lexicon is loaded
         "lyricsToSyllables" => to_json(&lyrics_in_with_dialect(&arg::<String>(req, "text")?, &st.g2p, &st.mandarin, arg::<Option<Lang>>(req, "lang")?.unwrap_or_default(), arg::<Option<arabic::ArabicDialect>>(req, "dialect")?.unwrap_or_default())),
-        "textToPhrases" => to_json(&arabic::text_to_phrases(&arg::<String>(req, "text")?, &st.g2p, arg::<Option<arabic::ArabicDialect>>(req, "dialect")?.unwrap_or_default())),
+        "arPhrases" => to_json(&arabic::text_to_phrases(&arg::<String>(req, "text")?, &st.g2p, arg::<Option<arabic::ArabicDialect>>(req, "dialect")?.unwrap_or_default())),
         // Turkish needs no dictionary: its spelling rules are the G2P
         "trPhrases" => to_json(&turkish::to_phrases(&arg::<String>(req, "text")?)),
         // ---------------------------------------------------------------- creatures

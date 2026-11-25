@@ -202,7 +202,7 @@ fn tokenize(input: &str, gaps: &mut Gaps) -> Vec<Segment> {
             if let Some(last) = out.last_mut() {
                 let mut emphatic = last.ipa.clone();
                 emphatic.push(ch);
-                if consonant(&emphatic).is_some() {
+                if last.word_end != Some(true) && consonant(&emphatic).is_some() {
                     last.ipa = emphatic;
                 } else {
                     gaps.ignore(Some(last), ch);
@@ -346,15 +346,7 @@ impl NfcTables {
     /// canonical-ordering rank (0 for a starter)
     fn rank(&self, c: char) -> u8 {
         let u = c as u32;
-        match self.ccc.binary_search_by(|&(a, b, _)| {
-            if b < u {
-                std::cmp::Ordering::Less
-            } else if a > u {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        }) {
+        match self.ccc.binary_search_by(|&(a, b, _)| if b < u { std::cmp::Ordering::Less } else if a > u { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Equal }) {
             Ok(k) => self.ccc[k].2,
             Err(_) => 0,
         }

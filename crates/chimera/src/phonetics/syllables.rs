@@ -358,9 +358,11 @@ pub fn lyrics_in_with_dialect(
     dialect: ArabicDialect,
 ) -> Vec<Syllable> {
     let arabic = ArabicFrontEnd(dialect);
-    match lang {
-        Lang::En => read_lyrics(text, &[&Pinyin, &English(g2p), &Korean, &Russian, &Japanese, &Mandarin(zh), arabic]),
-        Lang::Tr => read_lyrics(text, &[&Pinyin, &Turkish, &Korean, &Russian, &Japanese, &Mandarin(zh), arabic]),
-        Lang::Ar => read_lyrics(text, &[&Pinyin, &English(g2p), &Korean, &Russian, &Japanese, &Mandarin(zh), arabic]),
-    }
+    let english = English(g2p);
+    let latin: &dyn FrontEnd = match lang {
+        Lang::Tr => &Turkish,
+        Lang::En | Lang::Ar => &english,
+    };
+    let front_ends: [&dyn FrontEnd; 7] = [&Pinyin, latin, &Korean, &Russian, &Japanese, &Mandarin(zh), &arabic];
+    read_lyrics(text, &front_ends)
 }

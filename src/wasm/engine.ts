@@ -171,7 +171,7 @@ export function turkishPhrases(text: string): Phrase[] {
 
 /** Mixed-script speech: Arabic script is routed to the Arabic front end automatically. */
 export function textToPhrases(text: string, dialect: ArabicDialect = "msa"): Phrase[] {
-  return call("textToPhrases", { text, dialect });
+  return call("arPhrases", { text, dialect });
 }
 
 // ------------------------------------------------------------------ planning

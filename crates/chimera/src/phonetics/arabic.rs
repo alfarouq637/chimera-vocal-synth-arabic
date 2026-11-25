@@ -2,7 +2,7 @@
 //! Unvowelled text uses a deliberately small /a/ insertion heuristic; tashkeel is authoritative
 //! whenever present. The dialect changes only the consonants whose everyday pronunciations differ.
 
-use super::english::{EnglishG2P, Phrase, apply_allophones};
+use super::english::{EnglishG2P, Phrase, apply_allophones, expand_numbers};
 use super::syllables::{FrontEnd, syllabify_with};
 use super::{Intonation, Segment, Syllable};
 use serde::{Deserialize, Serialize};
@@ -467,7 +467,8 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
     let mut phrases = Vec::new();
     let mut segments = Vec::new();
     let mut words = Vec::new();
-    let mut chars = text.chars().peekable();
+    let normalized = expand_numbers(&text.replace('’', "'"));
+    let mut chars = normalized.chars().peekable();
     let mut delimiter = String::new();
 
     let flush = |segments: &mut Vec<Segment>,

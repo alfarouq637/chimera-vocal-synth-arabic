@@ -97,7 +97,14 @@ export async function speakText(text: string, o: { ipa: boolean; lang?: Lang; di
   let phrases: Phrase[];
   if (o.ipa) phrases = ipaToPhrases(text);
   else if (o.lang === "tr") phrases = turkishPhrases(text);
-  else if (o.lang === "ar") phrases = textToPhrases(text, o.dialect);
+  else if (o.lang === "ar") {
+    try {
+      await g2p.load();
+    } catch {
+      // dictionary unavailable: the letter-to-sound rules still work
+    }
+    phrases = textToPhrases(text, o.dialect);
+  }
   else {
     try {
       await g2p.load();

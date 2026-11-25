@@ -321,7 +321,7 @@ fn js_integer_to_string(n: f64) -> String {
     }
     format!("{n:e}").replacen('e', "e+", 1)
 }
-fn expand_numbers(t: &str) -> String {
+pub(crate) fn expand_numbers(t: &str) -> String {
     let mut out = String::with_capacity(t.len());
     let mut digits = String::new();
     let emit = |digits: &mut String, out: &mut String| {

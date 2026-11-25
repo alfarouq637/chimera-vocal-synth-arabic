@@ -150,8 +150,9 @@ export const useSing = create<SingState>((set, get) => ({
       // a demo song brings its words, in English or a script of its own; the player's own words
       // and language come back with a mood
       if (!asWritten) ownWords = { lyrics, lang };
-      if (lyrics !== words || lang !== "en") {
-        set({ lang: "en" });
+      const demoLang: Lang = words.split(/[\s\p{P}\p{N}]+/u).some((word) => [...word].some((c) => c >= "\u0600" && c <= "\u06ff")) ? "ar" : "en";
+      if (lyrics !== words || lang !== demoLang) {
+        set({ lang: demoLang });
         get().setLyrics(words);
       }
     } else if (asWritten && ownWords !== null) {
@@ -436,7 +437,7 @@ export async function playTune(id: string, body: BodyMix, ready?: () => Promise<
   const shift = tune.octave[nearestBody(body)] * 12 + st.key;
   // a demo song's own words, unedited: a syllable to each note as written (as `chimera render song`)
   const { notes, from } =
-    tune.lyrics !== undefined && st.lyrics === tune.lyrics && own.length
+      tune.lyrics !== undefined && tune.phrases.length === 1 && st.lyrics === tune.lyrics && own.length
       ? {
           notes: tune.phrases[0].map(([midi, beats], i) => ({ midi: midi + shift, beats, syl: own[i % own.length] })),
           from: tune.phrases[0].map((_, i) => i % own.length),
