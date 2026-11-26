@@ -2,7 +2,7 @@
 //! Unvowelled text uses a deliberately small /a/ insertion heuristic; tashkeel is authoritative
 //! whenever present. The dialect changes only the consonants whose everyday pronunciations differ.
 
-use super::english::{EnglishG2P, Phrase, apply_allophones, expand_numbers};
+use super::english::{EnglishG2P, Phrase, expand_numbers};
 use super::syllables::{FrontEnd, syllabify_with};
 use super::{Intonation, Segment, Syllable};
 use serde::{Deserialize, Serialize};
@@ -157,6 +157,7 @@ pub fn word_segments(word: &str, dialect: ArabicDialect) -> Vec<Segment> {
         let article_lam = i == 1
             && g.letter == 'ل'
             && previous == Some('ا')
+            && gs[0].vowel.is_none()
             && next.is_some_and(is_sun_letter);
         let sun_assimilated =
             i >= 2 && gs[i - 1].letter == 'ل' && gs[i - 2].letter == 'ا' && is_sun_letter(g.letter);
@@ -169,8 +170,9 @@ pub fn word_segments(word: &str, dialect: ArabicDialect) -> Vec<Segment> {
             'إ' if g.vowel.is_none() => Some("i"),
             _ => None,
         };
-        let is_long_waw = g.letter == 'و' && out.last().is_some_and(|s| s.ipa == "u");
-        let is_long_yaa = g.letter == 'ي' && out.last().is_some_and(|s| s.ipa == "i");
+        let marked_consonant = g.vowel.is_some() || g.shadda || g.sukun || g.tanwin;
+        let is_long_waw = g.letter == 'و' && !marked_consonant && out.last().is_some_and(|s| s.ipa == "u");
+        let is_long_yaa = g.letter == 'ي' && !marked_consonant && out.last().is_some_and(|s| s.ipa == "i");
         let c = if g.letter == 'ة' || is_long_waw || is_long_yaa {
             None
         } else {
@@ -417,28 +419,6 @@ impl FrontEnd for ArabicFrontEnd {
     fn word(&self, word: &str) -> Vec<Syllable> {
         let segs = word_segments(word, self.0);
         let parts = syllabify_with(&segs, |cluster| cluster.len() == 1);
-        /*
-            cluster.len() == 1
-                || cluster.first().is_some_and(|s| {
-                    matches!(
-                        s.ipa.as_str(),
-                        "b" | "t"
-                            | "d"
-                            | "k"
-                            | "q"
-                            | "m"
-                            | "n"
-                            | "f"
-                            | "s"
-                            | "ʃ"
-                            | "x"
-                            | "ɣ"
-                            | "ʕ"
-                            | "ħ"
-                    )
-                })
-        });
-        */
         let spell = spelling_parts(word, parts.len());
         parts
             .into_iter()
@@ -457,7 +437,7 @@ impl FrontEnd for ArabicFrontEnd {
 fn is_punct(c: char) -> bool {
     matches!(
         c,
-        '.' | ',' | ';' | ':' | '!' | '?' | '\n' | '،' | '؛' | '؟'
+        '.' | ',' | ';' | ':' | '!' | '?' | '،' | '؛' | '؟'
     )
 }
 
@@ -467,6 +447,7 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
     let mut phrases = Vec::new();
     let mut segments = Vec::new();
     let mut words = Vec::new();
+    let mut latin = String::new();
     let normalized = expand_numbers(&text.replace('’', "'"));
     let mut chars = normalized.chars().peekable();
     let mut delimiter = String::new();
@@ -498,8 +479,21 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
         });
     };
 
+    let flush_latin = |latin: &mut String, segments: &mut Vec<Segment>, words: &mut Vec<String>| {
+        if latin.trim().is_empty() {
+            latin.clear();
+            return;
+        }
+        for phrase in g2p.to_phrases(latin) {
+            segments.extend(phrase.segments);
+            words.extend(phrase.words);
+        }
+        latin.clear();
+    };
+
     while let Some(c) = chars.next() {
         if is_punct(c) {
+            flush_latin(&mut latin, &mut segments, &mut words);
             delimiter.push(c);
             while chars.peek().is_some_and(|n| is_punct(*n)) {
                 delimiter.push(chars.next().unwrap());
@@ -509,6 +503,7 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
             continue;
         }
         if starts(c) {
+            flush_latin(&mut latin, &mut segments, &mut words);
             let mut word = String::from(c);
             while chars.peek().is_some_and(|n| continues(*n)) {
                 word.push(chars.next().unwrap());
@@ -521,23 +516,9 @@ pub fn text_to_phrases(text: &str, g2p: &EnglishG2P, dialect: ArabicDialect) -> 
             }
             continue;
         }
-        if c.is_ascii_alphabetic() || c == '\'' {
-            let mut word = String::from(c);
-            while chars
-                .peek()
-                .is_some_and(|n| n.is_ascii_alphabetic() || *n == '\'' || *n == '-')
-            {
-                word.push(chars.next().unwrap());
-            }
-            let mut ws = g2p.word(&word.to_lowercase(), true);
-            if let Some(last) = ws.last_mut() {
-                last.word_end = Some(true);
-                apply_allophones(&mut ws);
-                segments.append(&mut ws);
-                words.push(word);
-            }
-        }
+        latin.push(c);
     }
+    flush_latin(&mut latin, &mut segments, &mut words);
     flush(&mut segments, &mut words, "", &mut phrases);
     phrases
 }

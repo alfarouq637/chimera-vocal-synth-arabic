@@ -179,7 +179,7 @@ fn tokenize(input: &str, gaps: &mut Gaps) -> Vec<Segment> {
             i += 1;
             continue;
         }
-        if ch == ' ' || ch == '.' || ch == '|' || ch == ',' {
+        if ch.is_whitespace() || ch == '.' || ch == '|' || ch == ',' {
             if let Some(last) = out.last_mut() {
                 last.word_end = Some(true);
             }

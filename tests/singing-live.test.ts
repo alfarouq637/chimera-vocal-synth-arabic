@@ -252,6 +252,10 @@ describe("Sing mode, live keys", () => {
     expect(await playTune(sawt.id, MALE, () => Promise.resolve())).toBe(true);
     const firstPhraseEnd = 0.35 + sawt.phrases[0].reduce((n, [, beats]) => n + beats, 0) * 60 / sawt.bpm;
     expect(Math.max(...voice.score().map((g) => g.t1))).toBeGreaterThan(firstPhraseEnd);
+    const planEnd = Math.max(...voice.score().map((g) => g.t1));
+    planned({ type: "planned", id: 1, t0: voice.clock - planEnd - 0.01, end: 0 });
+    tickSinging();
+    expect(sing().at).toBe(sing().syllables.length - 1);
     stopSinging();
     sing().setLang("en");
     sing().setTune("joyful");

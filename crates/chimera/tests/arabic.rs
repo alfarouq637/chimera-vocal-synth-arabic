@@ -2,6 +2,7 @@ use chimera::phonetics::arabic::{self, ArabicDialect};
 use chimera::phonetics::english::EnglishG2P;
 use chimera::phonetics::mandarin::MandarinLexicon;
 use chimera::phonetics::planner::{PlanOptions, plan_utterance};
+use chimera::phonetics::sing::{NoteOnOptions, SongOptions, SungNote, plan_note_on, plan_song};
 use chimera::phonetics::syllables::{FrontEnd, Lang, lyrics_in_with_dialect};
 use chimera::{anatomy::human::ArticKey, control::score::ControlKey};
 
@@ -119,6 +120,8 @@ fn emphatic_letters_keep_a_separate_retracted_tongue_articulation() {
     assert_eq!(ipa(&chimera::phonetics::ipa::tokenize_ipa("sˤa")), ["sˤ", "a"]);
     assert_eq!(ipa(&chimera::phonetics::ipa::tokenize_ipa("s ˤa")), ["s", "a"]);
     assert!(chimera::phonetics::ipa::skipped_ipa("sˤ").is_empty());
+    assert_eq!(ipa(&chimera::phonetics::ipa::tokenize_ipa("s\tˤa")), ["s", "a"]);
+    assert_eq!(ipa(&chimera::phonetics::ipa::tokenize_ipa("s\u{00a0}ˤa")), ["s", "a"]);
 }
 
 #[test]
@@ -161,7 +164,28 @@ fn arabic_tts_preserves_question_punctuation_and_mixed_english_words() {
     let mixed = arabic::text_to_phrases("hello 12 I’m مَرْحَبًا", &EnglishG2P::new(), ArabicDialect::Msa);
     let words: Vec<String> = mixed.into_iter().flat_map(|p| p.words).collect();
     assert!(words.iter().any(|w| w == "twelve"));
-    assert!(words.iter().any(|w| w == "I'm"));
+    assert!(words.iter().any(|w| w == "i'm"));
+    let lyric_syllables = lyrics_in_with_dialect("مَرْحَبًا، كَيْفَ حَالُكَ؟", &EnglishG2P::new(), &MandarinLexicon::new(), Lang::Ar, ArabicDialect::Msa);
+    assert_eq!(lyric_syllables.iter().filter(|s| s.phrase_end).count(), 2);
+    let english = EnglishG2P::new().to_phrases("hello 12 I’m\ngot it");
+    let arabic = arabic::text_to_phrases("hello 12 I’m\ngot it", &EnglishG2P::new(), ArabicDialect::Msa);
+    assert_eq!(arabic.iter().flat_map(|p| p.segments.iter().map(|s| s.ipa.as_str())).collect::<Vec<_>>(), english.iter().flat_map(|p| p.segments.iter().map(|s| s.ipa.as_str())).collect::<Vec<_>>());
+}
+
+#[test]
+fn marked_waw_and_ordinary_alif_lam_keep_their_phones() {
+    assert_eq!(ipa(&arabic::word_segments("\u{642}\u{64f}\u{648}\u{64e}\u{651}\u{629}\u{64c}", ArabicDialect::Msa)), ["q", "u", "w", "a", "t", "u", "n"]);
+    assert_eq!(ipa(&arabic::word_segments("\u{627}\u{650}\u{644}\u{0652}\u{62a}\u{64e}\u{642}\u{64e}\u{649}", ArabicDialect::Msa)), ["i", "l", "t", "a", "q", "a"]);
+}
+
+#[test]
+fn singing_keeps_pharyngealized_arabic_vowels() {
+    let syl = arabic::ArabicFrontEnd(ArabicDialect::Msa).word("\u{635}\u{64e}")[0].clone();
+    assert_eq!(syl.nucleus.pharyngealized, Some(true));
+    let song = plan_song(&[SungNote { midi: 60.0, beats: 1.0, syl: syl.clone() }], &SongOptions { body: "male".into(), bpm: 90.0, t0: 0.5, vibrato: 0.0, ..Default::default() });
+    assert!(song.gestures.iter().any(|g| g.targets.get(ControlKey::Artic(ArticKey::Root)).is_some()));
+    let live = plan_note_on(&syl, 60.0, &NoteOnOptions { body: "male".into(), vibrato: 0.0, tag: 1.0, legato_from: None });
+    assert!(live.iter().any(|g| g.targets.get(ControlKey::Artic(ArticKey::Root)).is_some()));
 }
 
 #[test]

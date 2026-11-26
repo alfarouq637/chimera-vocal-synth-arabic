@@ -43,7 +43,6 @@ describe("tunes", () => {
     expect(nosePhones.slice(-7)).toEqual(["b", "i", "ʔ", "a", "n", "f", "i"]);
   });
 
-  /*
   test("a long Arabic word keeps every syllable", () => {
     const syllables = lyricsToSyllables("كَتَبَ");
     const fitted = fitSong(TUNES[0], syllables);
@@ -68,7 +67,6 @@ describe("tunes", () => {
     expect(sung(fitted.notes)).toEqual(texts(syllables.filter((s) => !s.melisma)));
     expect(fitted.from.length).toBeGreaterThan(0);
   });
-  */
 });
 
 describe("fitting a line to a phrase", () => {
