@@ -179,7 +179,7 @@ fn tokenize(input: &str, gaps: &mut Gaps) -> Vec<Segment> {
             i += 1;
             continue;
         }
-        if ch.is_whitespace() || ch == '.' || ch == '|' || ch == ',' {
+        if ch == ' ' || ch == '.' || ch == '|' || ch == ',' {
             if let Some(last) = out.last_mut() {
                 last.word_end = Some(true);
             }
@@ -202,7 +202,11 @@ fn tokenize(input: &str, gaps: &mut Gaps) -> Vec<Segment> {
             if let Some(last) = out.last_mut() {
                 let mut emphatic = last.ipa.clone();
                 emphatic.push(ch);
-                if last.word_end != Some(true) && consonant(&emphatic).is_some() {
+                let separated_by_whitespace = i > 0 && s[i - 1].is_whitespace();
+                if last.word_end != Some(true)
+                    && !separated_by_whitespace
+                    && consonant(&emphatic).is_some()
+                {
                     last.ipa = emphatic;
                 } else {
                     gaps.ignore(Some(last), ch);
